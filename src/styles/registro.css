@@ -1,0 +1,41 @@
+
+/* =====================================
+   REGISTRO - PERFULANDIA
+===================================== */
+
+/* Fondo de la página de registro */
+main:has(.registro-card) {
+    background-color: #f4efe9;
+    min-height: 100vh;
+}
+
+/* Tarjeta del registro */
+.registro-card {
+    border-radius: 15px;
+}
+
+/* Logo del formulario de registro */
+.logo-registro {
+    display: block;
+    width: 150px;
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto 20px;
+}
+
+/* Botón Crear cuenta */
+.registro-card .btn-perfulandia {
+    background-color: #d9a7b0;
+    color: white;
+    border: 1px solid #d9a7b0;
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 16px;
+}
+
+/* Efecto al pasar el mouse */
+.registro-card .btn-perfulandia:hover {
+    background-color: #bf8792;
+    border-color: #bf8792;
+    color: white;
+}

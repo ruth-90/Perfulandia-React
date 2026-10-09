@@ -1,0 +1,63 @@
+
+/* =====================================
+   LOGIN - PERFULANDIA
+===================================== */
+
+/* Tarjeta del formulario */
+.login-card {
+    border-radius: 15px;
+}
+
+/* Logo del login */
+.logo-login {
+    display: block;
+    width: 150px;
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto 20px;
+}
+
+/* Enlace para crear una cuenta */
+.link-registro {
+    color: var(--rosa-oscuro);
+    text-decoration: none;
+}
+
+.link-registro:hover {
+    text-decoration: underline;
+}
+
+/* Fondo de la página Login */
+main:has(.login-card) {
+    background-color: #f4efe9;
+    min-height: 100vh;
+}
+
+
+/* =====================================
+   BOTÓN INICIAR SESIÓN
+===================================== */
+
+.login-card .btn-perfulandia {
+    background-color: #d9a7b0;
+    color: white;
+    border: 1px solid #d9a7b0;
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 16px;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+}
+
+/* Efecto al pasar el mouse */
+.login-card .btn-perfulandia:hover {
+    background-color: #bf8792;
+    border-color: #bf8792;
+    color: white;
+}
+
+/* Efecto al seleccionar el botón */
+.login-card .btn-perfulandia:focus-visible {
+    outline: 2px solid #bf8792;
+    outline-offset: 3px;
+}

@@ -1,0 +1,79 @@
+/* =====================================
+   INICIO - PERFULANDIA
+===================================== */
+
+/* Carrusel principal */
+.banner-home {
+    width: 100%;
+    overflow: hidden;
+}
+
+/* Imágenes del carrusel */
+.banner-img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Carrusel de Bootstrap */
+.banner-home .carousel-inner {
+    width: 100%;
+}
+
+/* Indicadores */
+.banner-home .carousel-indicators {
+    margin-bottom: 15px;
+}
+
+/* =====================================
+   SECCIÓN BENEFICIOS - PERFULANDIA
+===================================== */
+
+.beneficios {
+    background-color: var(--blanco);
+}
+
+/* Contenedor individual */
+.beneficio {
+    text-align: center;
+    padding: 20px;
+}
+
+/* Iconos */
+.beneficio i {
+    display: block;
+    font-size: 2.5rem;
+    color: var(--rosa-oscuro);
+    margin-bottom: 15px;
+}
+
+/* Títulos */
+.beneficio h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--texto);
+    margin-bottom: 12px;
+}
+
+/* Descripciones */
+.beneficio p {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--gris);
+    margin-bottom: 0;
+}
+
+/* Ajustes para pantallas pequeñas */
+@media (max-width: 767px) {
+    .beneficio {
+        padding: 15px;
+    }
+
+    .beneficio i {
+        font-size: 2rem;
+    }
+
+    .beneficio h3 {
+        font-size: 1.3rem;
+    }
+}
