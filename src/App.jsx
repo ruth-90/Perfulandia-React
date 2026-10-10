@@ -11,6 +11,7 @@ import Nosotros from './pages/Nosotros.jsx'
 import Contacto from './pages/Contacto.jsx'
 import Login from './pages/Login.jsx'
 import Registro from './pages/Registro.jsx'
+import Blogs from './pages/Blogs.jsx'
 
 import './App.css'
 
@@ -113,9 +114,11 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/registro" element={<Registro />} />
 
+          {/* BLOG */}
+          <Route path="/blogs" element={<Blogs />} />
+
           {/* RUTAS PENDIENTES */}
           <Route path="/carrito" element={<PaginaPendiente titulo="Carrito de Compras" />} />
-          <Route path="/blogs" element={<PaginaPendiente titulo="Blog de Fragancias" />} />
         </Routes>
       </main>
 
