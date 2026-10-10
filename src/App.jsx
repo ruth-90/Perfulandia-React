@@ -12,6 +12,7 @@ import Contacto from './pages/Contacto.jsx'
 import Login from './pages/Login.jsx'
 import Registro from './pages/Registro.jsx'
 import Blogs from './pages/Blogs.jsx'
+import Carrito from './pages/Carrito.jsx'
 
 import './App.css'
 
@@ -77,6 +78,31 @@ export default function App() {
     })
   }
 
+  // MODIFICAR CANTIDAD DE UN PRODUCTO (+1 o -1)
+  function modificarCantidad(id, cambio) {
+    setCarrito((carritoActual) =>
+      carritoActual
+        .map((item) =>
+          item.id === id
+            ? { ...item, cantidad: Number(item.cantidad || 1) + cambio }
+            : item
+        )
+        .filter((item) => item.cantidad > 0)
+    )
+  }
+
+  // ELIMINAR UN PRODUCTO DEL CARRITO
+  function eliminarProducto(id) {
+    setCarrito((carritoActual) =>
+      carritoActual.filter((item) => item.id !== id)
+    )
+  }
+
+  // VACIAR TODO EL CARRITO
+  function vaciarCarrito() {
+    setCarrito([])
+  }
+
   // CANTIDAD TOTAL DE PRODUCTOS EN EL CARRITO
   const cantidadCarrito = carrito.reduce(
     (total, producto) => total + Number(producto.cantidad || 0),
@@ -117,8 +143,18 @@ export default function App() {
           {/* BLOG */}
           <Route path="/blogs" element={<Blogs />} />
 
-          {/* RUTAS PENDIENTES */}
-          <Route path="/carrito" element={<PaginaPendiente titulo="Carrito de Compras" />} />
+          {/* CARRITO Y CHECKOUT */}
+          <Route
+            path="/carrito"
+            element={
+              <Carrito
+                carrito={carrito}
+                onModificarCantidad={modificarCantidad}
+                onEliminarProducto={eliminarProducto}
+                onVaciarCarrito={vaciarCarrito}
+              />
+            }
+          />
         </Routes>
       </main>
 
