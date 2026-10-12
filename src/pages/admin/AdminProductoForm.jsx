@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import AdminSidebar from '../../components/AdminSidebar.jsx'
 import {
@@ -7,7 +7,7 @@ import {
   actualizarProducto
 } from '../../services/productosStorage.js'
 
-// Lista de imágenes disponibles de perfumes para selección rápida
+// Lista de imágenes disponibles de perfumes para selección rápida de muestra
 const imagenesDisponibles = [
   '/img/Perfume1.webp',
   '/img/Perfume2.webp',
@@ -29,6 +29,7 @@ export default function AdminProductoForm() {
   const productoId = searchParams.get('id')
 
   const esEdicion = Boolean(productoId)
+  const fileInputRef = useRef(null)
 
   // Estados controlados del formulario
   const [nombre, setNombre] = useState('')
@@ -36,6 +37,9 @@ export default function AdminProductoForm() {
   const [precio, setPrecio] = useState('')
   const [stock, setStock] = useState('')
   const [imagen, setImagen] = useState('/img/Perfume1.webp')
+  const [nombreArchivo, setNombreArchivo] = useState('')
+  const [arrastrando, setArrastrando] = useState(false)
+  const [mostrarCatalogo, setMostrarCatalogo] = useState(false)
   const [descripcion, setDescripcion] = useState('')
   const [error, setError] = useState('')
 
@@ -50,11 +54,100 @@ export default function AdminProductoForm() {
         setStock(productoExistente.stock)
         setImagen(productoExistente.imagen || '/img/Perfume1.webp')
         setDescripcion(productoExistente.descripcion || '')
+        setNombreArchivo('Imagen actual del producto')
       } else {
         setError('El producto que intentas editar no existe.')
       }
     }
   }, [productoId])
+
+  // Procesar archivo seleccionado (redimensionado inteligente para optimizar localStorage)
+  function procesarArchivoImagen(file) {
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      setError('Por favor selecciona un archivo de imagen válido (JPG, PNG, WEBP).')
+      return
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setError('La imagen seleccionada supera los 10MB.')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        // Redimensionar para evitar sobrepasar cuota de localStorage
+        const maxDim = 600
+        let width = img.width
+        let height = img.height
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width)
+            width = maxDim
+          } else {
+            width = Math.round((width * maxDim) / height)
+            height = maxDim
+          }
+        }
+
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0, width, height)
+
+        const optimizadaDataUrl = canvas.toDataURL('image/webp', 0.85)
+        setImagen(optimizadaDataUrl)
+        setNombreArchivo(file.name)
+        setError('')
+      }
+      img.onerror = () => {
+        setImagen(e.target.result)
+        setNombreArchivo(file.name)
+        setError('')
+      }
+      img.src = e.target.result
+    }
+    reader.readAsDataURL(file)
+  }
+
+  function handleFileChange(e) {
+    const file = e.target.files?.[0]
+    if (file) {
+      procesarArchivoImagen(file)
+    }
+  }
+
+  function handleDragOver(e) {
+    e.preventDefault()
+    setArrastrando(true)
+  }
+
+  function handleDragLeave(e) {
+    e.preventDefault()
+    setArrastrando(false)
+  }
+
+  function handleDrop(e) {
+    e.preventDefault()
+    setArrastrando(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) {
+      procesarArchivoImagen(file)
+    }
+  }
+
+  function handleQuitarFoto() {
+    setImagen('/img/Perfume1.webp')
+    setNombreArchivo('')
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
 
   // Guardar (Crear o Actualizar)
   function handleSubmit(e) {
@@ -71,6 +164,10 @@ export default function AdminProductoForm() {
     }
     if (stock === '' || Number(stock) < 0) {
       setError('Por favor ingresa un stock válido (0 o mayor).')
+      return
+    }
+    if (!imagen) {
+      setError('Por favor carga una foto para la fragancia.')
       return
     }
 
@@ -141,6 +238,152 @@ export default function AdminProductoForm() {
 
             <form onSubmit={handleSubmit}>
               <div className="row g-4">
+                {/* FOTO DE LA FRAGANCIA - ESTILO INSTAGRAM */}
+                <div className="col-12">
+                  <label className="form-label fw-semibold d-block mb-2">
+                    Foto de la fragancia <span className="text-danger">*</span>
+                  </label>
+
+                  <div
+                    className={`admin-foto-card ${arrastrando ? 'drag-over' : ''}`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    {/* AVATAR CIRCULAR CON OVERLAY Y BOTÓN FLOTANTE */}
+                    <div
+                      className="admin-avatar-container"
+                      onClick={() => fileInputRef.current?.click()}
+                      role="button"
+                      tabIndex={0}
+                      title="Haz clic para cargar una imagen desde tu dispositivo"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          fileInputRef.current?.click()
+                        }
+                      }}
+                    >
+                      <img
+                        src={imagen}
+                        alt="Foto de la fragancia"
+                        className="admin-avatar-img"
+                        onError={(e) => {
+                          e.target.src = '/img/Perfume1.webp'
+                        }}
+                      />
+                      <div className="admin-avatar-overlay">
+                        <i className="bi bi-camera-fill fs-4 mb-1"></i>
+                        <span>Cambiar</span>
+                      </div>
+                      <div className="admin-avatar-badge">
+                        <i className="bi bi-camera-fill"></i>
+                      </div>
+                    </div>
+
+                    {/* ACCIONES Y DETALLES */}
+                    <div className="admin-foto-actions">
+                      <div>
+                        <h6 className="fw-bold mb-1">
+                          {nombre ? nombre : 'Foto del perfume'}
+                        </h6>
+                        <p className="text-secondary small mb-2">
+                          {nombreArchivo ? (
+                            <span className="text-success fw-semibold">
+                              <i className="bi bi-check-circle-fill me-1"></i>
+                              {nombreArchivo}
+                            </span>
+                          ) : (
+                            'Sube una imagen desde tu dispositivo o arrástrala aquí.'
+                          )}
+                        </p>
+                      </div>
+
+                      <div className="d-flex align-items-center gap-2 flex-wrap">
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-perfulandia"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          <i className="bi bi-cloud-arrow-up-fill me-1"></i>
+                          {imagen ? 'Cambiar foto' : 'Subir foto'}
+                        </button>
+
+                        {nombreArchivo && (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-danger"
+                            onClick={handleQuitarFoto}
+                          >
+                            <i className="bi bi-trash3 me-1"></i>
+                            Quitar foto
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-secondary"
+                          onClick={() => setMostrarCatalogo(!mostrarCatalogo)}
+                        >
+                          <i className="bi bi-grid-3x3-gap me-1"></i>
+                          {mostrarCatalogo ? 'Ocultar catálogo' : 'Elegir del catálogo'}
+                        </button>
+                      </div>
+
+                      <small className="text-muted" style={{ fontSize: '0.8rem' }}>
+                        Archivos compatibles: JPG, PNG o WEBP. Sin escribir rutas.
+                      </small>
+
+                      {/* Input de archivo nativo oculto */}
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/png, image/jpeg, image/webp, image/gif"
+                        className="d-none"
+                        onChange={handleFileChange}
+                      />
+                    </div>
+                  </div>
+
+                  {/* CATÁLOGO VISUAL DE MUESTRAS OPCIONAL */}
+                  {mostrarCatalogo && (
+                    <div className="p-3 mt-3 rounded-4 bg-white border shadow-sm">
+                      <div className="d-flex justify-content-between align-items-center mb-2">
+                        <span className="small fw-semibold text-secondary">
+                          O selecciona una fragancia de muestra:
+                        </span>
+                        <button
+                          type="button"
+                          className="btn-close btn-sm"
+                          aria-label="Cerrar catálogo"
+                          onClick={() => setMostrarCatalogo(false)}
+                        ></button>
+                      </div>
+                      <div className="d-flex gap-2 flex-wrap">
+                        {imagenesDisponibles.map((img, i) => (
+                          <button
+                            key={img}
+                            type="button"
+                            className={`btn p-1 border rounded-3 admin-thumb-btn ${
+                              imagen === img ? 'active' : ''
+                            }`}
+                            onClick={() => {
+                              setImagen(img)
+                              setNombreArchivo(`Perfume de muestra ${i + 1}`)
+                            }}
+                            title={`Perfume ${i + 1}`}
+                          >
+                            <img
+                              src={img}
+                              alt={`Perfume ${i + 1}`}
+                              style={{ width: '48px', height: '48px', objectFit: 'contain' }}
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* NOMBRE */}
                 <div className="col-md-12">
                   <label htmlFor="nombreProducto" className="form-label fw-semibold">
@@ -210,59 +453,6 @@ export default function AdminProductoForm() {
                     onChange={(e) => setStock(e.target.value)}
                     required
                   />
-                </div>
-
-                {/* SELECTOR DE IMAGEN */}
-                <div className="col-md-8">
-                  <label htmlFor="imagenProducto" className="form-label fw-semibold">
-                    Imagen del perfume
-                  </label>
-                  <select
-                    id="imagenProducto"
-                    className="form-select mb-2"
-                    value={imagen}
-                    onChange={(e) => setImagen(e.target.value)}
-                  >
-                    {imagenesDisponibles.map((img, i) => (
-                      <option key={img} value={img}>
-                        Perfume {i + 1} ({img})
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="text"
-                    className="form-control form-control-sm text-muted"
-                    placeholder="O escribe una ruta personalizada..."
-                    value={imagen}
-                    onChange={(e) => setImagen(e.target.value)}
-                  />
-                </div>
-
-                {/* VISTA PREVIA DE LA IMAGEN */}
-                <div className="col-md-4 text-center">
-                  <label className="form-label fw-semibold d-block">Vista previa</label>
-                  <div
-                    style={{
-                      width: '100px',
-                      height: '100px',
-                      margin: '0 auto',
-                      borderRadius: '16px',
-                      backgroundColor: 'var(--rosa-claro)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '8px'
-                    }}
-                  >
-                    <img
-                      src={imagen}
-                      alt="Vista previa"
-                      style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }}
-                      onError={(e) => {
-                        e.target.src = '/img/Perfume1.webp'
-                      }}
-                    />
-                  </div>
                 </div>
 
                 {/* DESCRIPCIÓN */}
