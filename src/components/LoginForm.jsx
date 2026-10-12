@@ -18,6 +18,7 @@ export default function LoginForm() {
 
   // MENSAJE DE INICIO DE SESIÓN
   const [mensajeLogin, setMensajeLogin] = useState('')
+  const [tipoMensaje, setTipoMensaje] = useState('')
 
   // NAVEGACIÓN DE REACT ROUTER
   const navigate = useNavigate()
@@ -126,6 +127,27 @@ export default function LoginForm() {
     setContrasenaValidada(true)
   }
 
+  // BUSCAR CLIENTE REGISTRADO
+  function buscarClienteRegistrado(correoBuscado) {
+    try {
+      const usuariosGuardados = JSON.parse(
+        localStorage.getItem('usuarios') || '[]'
+      )
+
+      if (!Array.isArray(usuariosGuardados)) {
+        return null
+      }
+
+      return usuariosGuardados.find(
+        usuario =>
+          usuario.correo?.toLowerCase() ===
+          correoBuscado.trim().toLowerCase()
+      ) || null
+
+    } catch {
+      return null
+    }
+  }
 
   // ENVÍO DEL FORMULARIO
   function manejarEnvio(evento) {
@@ -158,6 +180,7 @@ export default function LoginForm() {
 
       localStorage.removeItem('clienteActivo')
 
+      setTipoMensaje('success')
       setMensajeLogin('Ingreso administrador correcto.')
 
       // Esta ruta se configurará cuando creemos el panel
@@ -166,14 +189,33 @@ export default function LoginForm() {
       return
     }
 
+
+    // BUSCAR AL CLIENTE REGISTRADO
+    const clienteRegistrado = buscarClienteRegistrado(correoLogin)
+
+    // COMPROBAR QUE EXISTA LA CUENTA
+    if (!clienteRegistrado) {
+      setTipoMensaje('danger')
+      setMensajeLogin(
+        'Este correo no está registrado. Primero debes crear una cuenta.'
+      )
+      return
+    }
+
     // INGRESO CLIENTE DE DEMOSTRACIÓN
+    // Todavía no verificamos la contraseña.
     localStorage.setItem(
       'clienteActivo',
       JSON.stringify({
-        nombre: 'Cliente Perfulandia',
-        correo: correoLogin
+        nombre: `${clienteRegistrado.nombre} ${clienteRegistrado.apellidos}`,
+        correo: clienteRegistrado.correo
       })
     )
+
+    setTipoMensaje('success')
+    setMensajeLogin('Ingreso cliente correcto.')
+
+    navigate('/productos')
 
     setMensajeLogin('Ingreso cliente correcto.')
 
@@ -195,13 +237,12 @@ export default function LoginForm() {
         <input
           type="email"
           id="correo"
-          className={`form-control ${
-            correoValidado
-              ? errorCorreo
-                ? 'is-invalid'
-                : 'is-valid'
-              : ''
-          }`}
+          className={`form-control ${correoValidado
+            ? errorCorreo
+              ? 'is-invalid'
+              : 'is-valid'
+            : ''
+            }`}
           placeholder="ejemplo@gmail.com"
           value={correo}
           maxLength={100}
@@ -236,13 +277,12 @@ export default function LoginForm() {
         <input
           type={mostrarContrasena ? 'text' : 'password'}
           id="contrasena"
-          className={`form-control ${
-            contrasenaValidada
-              ? errorContrasena
-                ? 'is-invalid'
-                : 'is-valid'
-              : ''
-          }`}
+          className={`form-control ${contrasenaValidada
+            ? errorContrasena
+              ? 'is-invalid'
+              : 'is-valid'
+            : ''
+            }`}
           placeholder="Ingresa tu contraseña"
           value={contrasena}
           onChange={(evento) => {
@@ -292,7 +332,7 @@ export default function LoginForm() {
       {/* MENSAJE DE INICIO DE SESIÓN */}
       {mensajeLogin && (
         <div
-          className="alert alert-success mt-3"
+          className={`alert alert-${tipoMensaje} mt-3`}
           role="alert"
         >
           {mensajeLogin}
