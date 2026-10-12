@@ -1,0 +1,266 @@
+/* =====================================================
+   ADMIN - PERFULANDIA (DARLING)
+===================================================== */
+
+.admin-body {
+    background-color: var(--beige-claro);
+    min-height: 100vh;
+}
+
+.admin-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+.admin-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 260px;
+    min-height: 100vh;
+    background-color: #f8eeee;
+    border-right: 1px solid #ead8dc;
+    padding: 24px 18px;
+    z-index: 100;
+}
+
+.admin-sidebar-logo {
+    text-align: center;
+    margin-bottom: 35px;
+}
+
+.logo-admin-sidebar {
+    width: 180px;
+    height: auto;
+    object-fit: contain;
+}
+
+.admin-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.admin-menu-link,
+.admin-submenu-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--texto);
+    border-radius: 14px;
+    padding: 11px 14px;
+    text-decoration: none;
+    transition: 0.3s;
+}
+
+.admin-menu-button {
+    width: 100%;
+    border: none;
+    background-color: transparent;
+    text-align: left;
+}
+
+.admin-menu-link i,
+.admin-submenu-link i {
+    font-size: 1.15rem;
+}
+
+.admin-menu-link:hover,
+.admin-submenu-link:hover {
+    background-color: #efdde2;
+    color: var(--rosa-oscuro);
+}
+
+.admin-menu-link.active,
+.admin-submenu-link.active {
+    background-color: var(--rosa-principal);
+    color: var(--blanco);
+}
+
+.admin-submenu {
+    padding-left: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.admin-submenu-link {
+    font-size: 0.95rem;
+    padding-top: 9px;
+    padding-bottom: 9px;
+}
+
+.admin-menu-tienda {
+    color: var(--rosa-oscuro);
+}
+
+.admin-menu-separador {
+    margin: 15px 0;
+    border-color: #dfcfd3;
+}
+
+.admin-main {
+    margin-left: 260px;
+    width: calc(100% - 260px);
+    padding: 38px;
+    min-height: 100vh;
+    background-color: var(--beige-claro);
+}
+
+.admin-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 25px;
+}
+
+.admin-identidad {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background-color: var(--blanco);
+    border-radius: 18px;
+    padding: 14px 18px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.05);
+}
+
+.admin-avatar,
+.admin-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: var(--rosa-claro);
+    color: var(--rosa-oscuro);
+}
+
+.admin-icon {
+    font-size: 1.5rem;
+}
+
+.admin-card,
+.admin-panel,
+.admin-form,
+.admin-table-wrap {
+    background-color: var(--blanco);
+    border-radius: 18px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.06);
+}
+
+.admin-card {
+    transition: transform 0.3s;
+}
+
+.admin-card:hover {
+    transform: translateY(-4px);
+}
+
+.admin-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background-color: var(--beige-claro);
+    color: var(--texto);
+    border-radius: 14px;
+    padding: 16px;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.admin-link:hover {
+    color: var(--rosa-oscuro);
+    background-color: var(--rosa-claro);
+}
+
+.admin-footer {
+    color: #777777;
+}
+
+.admin-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background-color: var(--blanco);
+    border-radius: 18px;
+    padding: 22px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.06);
+}
+
+.admin-stat i {
+    font-size: 1.7rem;
+    color: var(--rosa-oscuro);
+}
+
+.admin-stat span {
+    color: var(--gris);
+}
+
+.admin-stat strong {
+    font-size: 1.8rem;
+}
+
+.admin-producto {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 320px;
+}
+
+.admin-producto img {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    border-radius: 14px;
+    background-color: var(--rosa-claro);
+    padding: 4px;
+}
+
+.admin-producto p {
+    color: var(--gris);
+    font-size: 0.9rem;
+    margin-bottom: 0;
+}
+
+.estado-stock {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.estado-stock.disponible {
+    background-color: #e9f7ef;
+    color: #28784b;
+}
+
+.estado-stock.sin-stock {
+    background-color: #fdecee;
+    color: #b8404f;
+}
+
+@media (max-width: 992px) {
+    .admin-layout {
+        flex-direction: column;
+    }
+
+    .admin-sidebar {
+        position: static;
+        width: 100%;
+        min-height: auto;
+    }
+
+    .admin-main {
+        margin-left: 0;
+        width: 100%;
+        padding: 28px 18px;
+    }
+
+    .admin-top {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+

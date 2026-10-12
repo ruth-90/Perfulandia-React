@@ -1,4 +1,4 @@
-import { useState, useId } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router'
 
 // Regiones y comunas para despacho en Chile

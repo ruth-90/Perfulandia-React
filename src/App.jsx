@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router'
+import { Routes, Route, useLocation } from 'react-router'
 import { useState, useEffect } from 'react'
 
 import Navbar from './components/Navbar.jsx'
@@ -14,19 +14,17 @@ import Registro from './pages/Registro.jsx'
 import Blogs from './pages/Blogs.jsx'
 import Carrito from './pages/Carrito.jsx'
 
+// Vistas de Administración (Módulos de Darling)
+import AdminDashboard from './pages/admin/AdminDashboard.jsx'
+import AdminProductos from './pages/admin/AdminProductos.jsx'
+import AdminProductoForm from './pages/admin/AdminProductoForm.jsx'
+
 import './App.css'
 
-// Vista temporal para rutas pendientes de diseño
-function PaginaPendiente({ titulo }) {
-  return (
-    <div className="container py-5 text-center">
-      <h2>{titulo}</h2>
-      <p className="text-muted">Próximamente disponible en Perfulandia.</p>
-    </div>
-  )
-}
-
 export default function App() {
+  const location = useLocation()
+  const esAdmin = location.pathname.startsWith('/admin')
+
   // ESTADO DEL CARRITO CON PERSISTENCIA EN LOCALSTORAGE
   const [carrito, setCarrito] = useState(() => {
     try {
@@ -111,8 +109,8 @@ export default function App() {
 
   return (
     <div className="d-flex flex-column min-vh-100">
-      {/* Barra de navegación con contador dinámico */}
-      <Navbar cantidadCarrito={cantidadCarrito} />
+      {/* Barra de navegación de la tienda (se oculta en panel admin) */}
+      {!esAdmin && <Navbar cantidadCarrito={cantidadCarrito} />}
 
       {/* Contenido principal según la ruta */}
       <main className="flex-grow-1">
@@ -155,11 +153,16 @@ export default function App() {
               />
             }
           />
+
+          {/* MÓDULOS DE ADMINISTRACIÓN (DARLING) */}
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/productos" element={<AdminProductos />} />
+          <Route path="/admin/producto-form" element={<AdminProductoForm />} />
         </Routes>
       </main>
 
-      {/* Pie de página oficial de Perfulandia */}
-      <Footer />
+      {/* Pie de página de la tienda (se oculta en panel admin) */}
+      {!esAdmin && <Footer />}
     </div>
   )
 }

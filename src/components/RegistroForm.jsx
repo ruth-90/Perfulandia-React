@@ -124,7 +124,6 @@ export default function RegistroForm() {
   const navigate = useNavigate()
 
   const hoy = new Date()
-  const fechaActual = formatearFecha(hoy)
 
   const fechaLimite = new Date(
     hoy.getFullYear() - 18,
