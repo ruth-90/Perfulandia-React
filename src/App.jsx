@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router'
+import { Routes, Route, useLocation } from 'react-router'
 import { useState, useEffect } from 'react'
 
 import Navbar from './components/Navbar.jsx'
@@ -11,20 +11,21 @@ import Nosotros from './pages/Nosotros.jsx'
 import Contacto from './pages/Contacto.jsx'
 import Login from './pages/Login.jsx'
 import Registro from './pages/Registro.jsx'
+import Blogs from './pages/Blogs.jsx'
+import Carrito from './pages/Carrito.jsx'
+
+// Vistas de Administración (Módulos de Darling)
+import AdminDashboard from './pages/admin/AdminDashboard.jsx'
+import AdminProductos from './pages/admin/AdminProductos.jsx'
+import AdminProductoForm from './pages/admin/AdminProductoForm.jsx'
+import { obtenerProductoPorId } from './services/productosStorage.js'
 
 import './App.css'
 
-// Vista temporal para rutas pendientes de diseño
-function PaginaPendiente({ titulo }) {
-  return (
-    <div className="container py-5 text-center">
-      <h2>{titulo}</h2>
-      <p className="text-muted">Próximamente disponible en Perfulandia.</p>
-    </div>
-  )
-}
-
 export default function App() {
+  const location = useLocation()
+  const esAdmin = location.pathname.startsWith('/admin')
+
   // ESTADO DEL CARRITO CON PERSISTENCIA EN LOCALSTORAGE
   const [carrito, setCarrito] = useState(() => {
     try {
@@ -42,10 +43,18 @@ export default function App() {
     localStorage.setItem('carrito', JSON.stringify(carrito))
   }, [carrito])
 
-  // AGREGAR UN PRODUCTO AL CARRITO
+  // AGREGAR UN PRODUCTO AL CARRITO CON CONTROL DE STOCK
   function agregarAlCarrito(producto, cantidad = 1) {
     const cantidadAgregar =
       Number.isInteger(cantidad) && cantidad > 0 ? cantidad : 1
+
+    const prodBd = obtenerProductoPorId(producto.id)
+    const stockMaximo = prodBd ? Number(prodBd.stock ?? 0) : Number(producto.stock ?? 99)
+
+    if (stockMaximo <= 0) {
+      alert(`Lo sentimos, "${producto.nombre}" está agotado en inventario.`)
+      return
+    }
 
     setCarrito((carritoActual) => {
       const productoExistente = carritoActual.find(
@@ -53,16 +62,26 @@ export default function App() {
       )
 
       if (productoExistente) {
+        if (productoExistente.cantidad >= stockMaximo) {
+          alert(`Ya tienes el stock máximo disponible (${stockMaximo} un.) de "${producto.nombre}" en el carrito.`)
+          return carritoActual
+        }
+
+        const cantidadDeseada = Number(productoExistente.cantidad || 0) + cantidadAgregar
+        const cantidadFinal = Math.min(cantidadDeseada, stockMaximo)
+
         return carritoActual.map((item) =>
           item.id === producto.id
             ? {
                 ...item,
-                cantidad: Number(item.cantidad || 0) + cantidadAgregar
+                cantidad: cantidadFinal,
+                stock: stockMaximo
               }
             : item
         )
       }
 
+      const cantidadInicial = Math.min(cantidadAgregar, stockMaximo)
       return [
         ...carritoActual,
         {
@@ -70,10 +89,47 @@ export default function App() {
           nombre: producto.nombre,
           precio: producto.precio,
           imagen: producto.imagen,
-          cantidad: cantidadAgregar
+          stock: stockMaximo,
+          cantidad: cantidadInicial
         }
       ]
     })
+  }
+
+  // MODIFICAR CANTIDAD DE UN PRODUCTO (+1 o -1) CON CONTROL DE STOCK
+  function modificarCantidad(id, cambio) {
+    const prodBd = obtenerProductoPorId(id)
+
+    setCarrito((carritoActual) =>
+      carritoActual
+        .map((item) => {
+          if (item.id === id) {
+            const stockMaximo = prodBd ? Number(prodBd.stock ?? 0) : Number(item.stock ?? 99)
+            const nuevaCantidad = Number(item.cantidad || 1) + cambio
+
+            // Si intenta aumentar y supera el stock disponible, no permitir
+            if (cambio > 0 && nuevaCantidad > stockMaximo) {
+              return item
+            }
+
+            return { ...item, cantidad: nuevaCantidad, stock: stockMaximo }
+          }
+          return item
+        })
+        .filter((item) => item.cantidad > 0)
+    )
+  }
+
+  // ELIMINAR UN PRODUCTO DEL CARRITO
+  function eliminarProducto(id) {
+    setCarrito((carritoActual) =>
+      carritoActual.filter((item) => item.id !== id)
+    )
+  }
+
+  // VACIAR TODO EL CARRITO
+  function vaciarCarrito() {
+    setCarrito([])
   }
 
   // CANTIDAD TOTAL DE PRODUCTOS EN EL CARRITO
@@ -84,8 +140,8 @@ export default function App() {
 
   return (
     <div className="d-flex flex-column min-vh-100">
-      {/* Barra de navegación con contador dinámico */}
-      <Navbar cantidadCarrito={cantidadCarrito} />
+      {/* Barra de navegación de la tienda (se oculta en panel admin) */}
+      {!esAdmin && <Navbar cantidadCarrito={cantidadCarrito} />}
 
       {/* Contenido principal según la ruta */}
       <main className="flex-grow-1">
@@ -113,14 +169,31 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/registro" element={<Registro />} />
 
-          {/* RUTAS PENDIENTES */}
-          <Route path="/carrito" element={<PaginaPendiente titulo="Carrito de Compras" />} />
-          <Route path="/blogs" element={<PaginaPendiente titulo="Blog de Fragancias" />} />
+          {/* BLOG */}
+          <Route path="/blogs" element={<Blogs />} />
+
+          {/* CARRITO Y CHECKOUT */}
+          <Route
+            path="/carrito"
+            element={
+              <Carrito
+                carrito={carrito}
+                onModificarCantidad={modificarCantidad}
+                onEliminarProducto={eliminarProducto}
+                onVaciarCarrito={vaciarCarrito}
+              />
+            }
+          />
+
+          {/* MÓDULOS DE ADMINISTRACIÓN (DARLING) */}
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/productos" element={<AdminProductos />} />
+          <Route path="/admin/producto-form" element={<AdminProductoForm />} />
         </Routes>
       </main>
 
-      {/* Pie de página oficial de Perfulandia */}
-      <Footer />
+      {/* Pie de página de la tienda (se oculta en panel admin) */}
+      {!esAdmin && <Footer />}
     </div>
   )
 }
