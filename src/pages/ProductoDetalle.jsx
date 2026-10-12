@@ -17,7 +17,7 @@ function ContenidoDetalle({ producto, onAgregarProducto }) {
     const [mensaje, setMensaje] = useState('')
 
     // Formatear el precio en pesos chilenos
-    const precioFormateado = producto.precio.toLocaleString(
+    const precioFormateado = Number(producto.precio || 0).toLocaleString(
         'es-CL',
         {
             style: 'currency',
@@ -204,11 +204,14 @@ export default function ProductoDetalle({ onAgregarProducto }) {
 
     // Obtener el ID del perfume desde la URL
     const [parametros] = useSearchParams()
+    const idParam = parametros.get('id')
+    const idProducto = idParam ? Number(idParam) : null
 
     // Buscar el perfume seleccionado en la base de datos o en productos base
-    const productoSeleccionado =
-        obtenerProductoPorId(idProducto) ||
-        productos.find((producto) => Number(producto.id) === idProducto)
+    // Si no se especifica ID en la URL, carga el primer producto por defecto
+    const productoSeleccionado = idProducto
+        ? (obtenerProductoPorId(idProducto) || productos.find((p) => Number(p.id) === idProducto))
+        : (obtenerProductoPorId(1) || productos[0])
 
     return (
         <>
