@@ -205,12 +205,10 @@ export default function ProductoDetalle({ onAgregarProducto }) {
     // Obtener el ID del perfume desde la URL
     const [parametros] = useSearchParams()
 
-    const idProducto = Number(parametros.get('id'))
-
-    // Buscar el perfume seleccionado
-    const productoSeleccionado = productos.find(
-        (producto) => producto.id === idProducto
-    )
+    // Buscar el perfume seleccionado en la base de datos o en productos base
+    const productoSeleccionado =
+        obtenerProductoPorId(idProducto) ||
+        productos.find((producto) => Number(producto.id) === idProducto)
 
     return (
         <>

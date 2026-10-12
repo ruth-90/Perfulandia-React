@@ -4,28 +4,28 @@ import Beneficios from '../components/Beneficios.jsx'
 import ProductoCard from '../components/ProductoCard.jsx'
 import '../styles/inicio.css'
 
-// Datos de los productos destacados
+// Datos de los productos destacados (IDs coincidentes con la base de datos)
 const productosDestacados = [
   {
-    id: 1,
+    id: 6,
     imagen: '/img/Perfume5.webp',
     categoria: 'Mujer',
     nombre: 'Paco Rabanne Olympea',
     precio: 39990
   },
   {
-    id: 2,
+    id: 9,
     imagen: '/img/Perfume8.webp',
     categoria: 'Mujer',
     nombre: 'Power Of You EDP 50 ML',
     precio: 49990
   },
   {
-    id: 3,
+    id: 4,
     imagen: '/img/Perfume11.webp',
-    categoria: 'Unisex',
+    categoria: 'Hombre',
     nombre: 'Azzaro The Most Wanted Intense EDT 100 ML',
-    precio: 49990
+    precio: 64990
   }
 ]
 
@@ -58,6 +58,7 @@ export default function Inicio() {
             {productosDestacados.map((producto) => (
               <ProductoCard
                 key={producto.id}
+                id={producto.id}
                 imagen={producto.imagen}
                 categoria={producto.categoria}
                 nombre={producto.nombre}

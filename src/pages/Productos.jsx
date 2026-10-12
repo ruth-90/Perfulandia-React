@@ -1,25 +1,30 @@
 
-import { useState } from 'react'
-import { productos } from '../data/productos.js'
+import { useState, useEffect } from 'react'
+import { obtenerProductos } from '../services/productosStorage.js'
 import ProductoCatalogoCard from '../components/ProductoCatalogoCard.jsx'
 
 export default function Productos({ onAgregarProducto }) {
+    // Lista de productos sincronizada con la base de datos local
+    const [listaProductos, setListaProductos] = useState([])
 
     // ESTADOS DE REACT
     const [busqueda, setBusqueda] = useState('')
     const [categoria, setCategoria] = useState('todos')
     const [mensaje, setMensaje] = useState('')
 
-    // FILTRAR PRODUCTOS
-    const productosFiltrados = productos.filter((producto) => {
+    useEffect(() => {
+        setListaProductos(obtenerProductos())
+    }, [])
 
+    // FILTRAR PRODUCTOS
+    const productosFiltrados = listaProductos.filter((producto) => {
         const coincideNombre = producto.nombre
             .toLowerCase()
             .includes(busqueda.toLowerCase().trim())
 
         const coincideCategoria =
             categoria === 'todos' ||
-            producto.categoria === categoria
+            producto.categoria.toLowerCase() === categoria.toLowerCase()
 
         return coincideNombre && coincideCategoria
     })
