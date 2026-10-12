@@ -2,9 +2,13 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { productos } from '../data/productos.js'
+import { obtenerProductoPorId } from '../services/productosStorage.js'
 
 // COMPONENTE CON LA INFORMACIÓN DEL PERFUME
 function ContenidoDetalle({ producto, onAgregarProducto }) {
+    const prodBd = obtenerProductoPorId(producto.id) || producto
+    const stockDisponible = Number(prodBd.stock ?? 99)
+    const sinStock = stockDisponible <= 0
 
     // Cantidad seleccionada por el usuario
     const [cantidad, setCantidad] = useState(1)
@@ -21,9 +25,11 @@ function ContenidoDetalle({ producto, onAgregarProducto }) {
         }
     )
 
-    // Aumentar cantidad
+    // Aumentar cantidad sin superar stock
     function aumentarCantidad() {
-        setCantidad((cantidadActual) => cantidadActual + 1)
+        setCantidad((cantidadActual) =>
+            Math.min(stockDisponible, cantidadActual + 1)
+        )
     }
 
     // Disminuir cantidad sin bajar de 1
@@ -35,6 +41,8 @@ function ContenidoDetalle({ producto, onAgregarProducto }) {
 
     // Añadir al carrito
     function agregarAlCarrito() {
+        if (sinStock) return
+
         onAgregarProducto(producto, cantidad)
 
         setMensaje(
@@ -106,6 +114,11 @@ function ContenidoDetalle({ producto, onAgregarProducto }) {
 
                             <p className="form-label">
                                 Cantidad
+                                {sinStock ? (
+                                    <span className="badge bg-danger ms-2">Agotado</span>
+                                ) : (
+                                    <small className="text-muted ms-2">({stockDisponible} unidades disponibles)</small>
+                                )}
                             </p>
 
                             <div className="selector-cantidad">
@@ -114,21 +127,23 @@ function ContenidoDetalle({ producto, onAgregarProducto }) {
                                     type="button"
                                     className="btn-cantidad"
                                     onClick={disminuirCantidad}
-                                    disabled={cantidad === 1}
+                                    disabled={cantidad === 1 || sinStock}
                                     aria-label="Disminuir cantidad"
                                 >
                                     −
                                 </button>
 
                                 <span id="cantidadProducto">
-                                    {cantidad}
+                                    {sinStock ? 0 : cantidad}
                                 </span>
 
                                 <button
                                     type="button"
                                     className="btn-cantidad"
                                     onClick={aumentarCantidad}
+                                    disabled={cantidad >= stockDisponible || sinStock}
                                     aria-label="Aumentar cantidad"
+                                    title={cantidad >= stockDisponible ? 'Stock máximo alcanzado' : 'Aumentar cantidad'}
                                 >
                                     +
                                 </button>
@@ -143,9 +158,10 @@ function ContenidoDetalle({ producto, onAgregarProducto }) {
                                 type="button"
                                 className="btn btn-perfulandia btn-lg"
                                 onClick={agregarAlCarrito}
+                                disabled={sinStock}
                             >
                                 <i className="bi bi-bag-plus"></i>
-                                {' '}Añadir al carrito
+                                {' '}{sinStock ? 'Producto Agotado' : 'Añadir al carrito'}
                             </button>
 
                             <Link

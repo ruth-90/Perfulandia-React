@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
+import { obtenerProductoPorId } from '../services/productosStorage.js'
 
 // Regiones y comunas para despacho en Chile
 const regionesComunas = {
@@ -61,6 +62,22 @@ export default function Carrito({
     if (!nombre.trim() || !correo.trim() || !telefono.trim() || !region || !comuna || !direccion.trim() || !metodoPago) {
       setErrorValidacion('Por favor completa todos los campos de entrega y pago.')
       return
+    }
+
+    // Validar si algún producto supera el stock disponible en bodega
+    for (const item of carrito) {
+      const prodBd = obtenerProductoPorId(item.id)
+      const stockDisponible = prodBd ? Number(prodBd.stock ?? 0) : Number(item.stock ?? 99)
+
+      if (stockDisponible <= 0) {
+        setErrorValidacion(`Lo sentimos, "${item.nombre}" se ha agotado. Por favor elimínalo del carrito para continuar.`)
+        return
+      }
+
+      if (item.cantidad > stockDisponible) {
+        setErrorValidacion(`"${item.nombre}" supera el stock disponible (${stockDisponible} un.). Por favor reduce la cantidad.`)
+        return
+      }
     }
 
     setErrorValidacion('')
@@ -210,32 +227,52 @@ export default function Carrito({
 
             {/* LISTA DE ITEMS */}
             <div className="carrito-lista mb-4">
-              {carrito.map((producto) => (
-                <article key={producto.id} className="carrito-item">
-                  <img src={producto.imagen} alt={producto.nombre} />
+              {carrito.map((producto) => {
+                const prodBd = obtenerProductoPorId(producto.id)
+                const stockDisponible = prodBd ? Number(prodBd.stock ?? 0) : Number(producto.stock ?? 99)
+                const alcanzoTope = producto.cantidad >= stockDisponible
+                const sinStock = stockDisponible <= 0
 
-                  <div className="carrito-item-info">
-                    <h2>{producto.nombre}</h2>
-                    <p>{formatearPrecio(producto.precio)} c/u</p>
-                  </div>
+                return (
+                  <article key={producto.id} className="carrito-item">
+                    <img src={producto.imagen} alt={producto.nombre} />
 
-                  <div className="carrito-cantidad">
-                    <button
-                      type="button"
-                      onClick={() => onModificarCantidad(producto.id, -1)}
-                      aria-label="Disminuir cantidad"
-                    >
-                      <i className="bi bi-dash"></i>
-                    </button>
-                    <span>{producto.cantidad}</span>
-                    <button
-                      type="button"
-                      onClick={() => onModificarCantidad(producto.id, 1)}
-                      aria-label="Aumentar cantidad"
-                    >
-                      <i className="bi bi-plus"></i>
-                    </button>
-                  </div>
+                    <div className="carrito-item-info">
+                      <h2>{producto.nombre}</h2>
+                      <p>{formatearPrecio(producto.precio)} c/u</p>
+
+                      {sinStock ? (
+                        <span className="badge bg-danger mt-1">Agotado en inventario</span>
+                      ) : alcanzoTope ? (
+                        <span className="badge bg-warning text-dark mt-1">
+                          Límite de stock alcanzado ({stockDisponible} un.)
+                        </span>
+                      ) : (
+                        <small className="text-muted d-block mt-1">
+                          Stock disponible: <strong>{stockDisponible}</strong> un.
+                        </small>
+                      )}
+                    </div>
+
+                    <div className="carrito-cantidad">
+                      <button
+                        type="button"
+                        onClick={() => onModificarCantidad(producto.id, -1)}
+                        aria-label="Disminuir cantidad"
+                      >
+                        <i className="bi bi-dash"></i>
+                      </button>
+                      <span>{producto.cantidad}</span>
+                      <button
+                        type="button"
+                        onClick={() => onModificarCantidad(producto.id, 1)}
+                        aria-label="Aumentar cantidad"
+                        disabled={alcanzoTope}
+                        title={alcanzoTope ? `Stock máximo (${stockDisponible}) alcanzado` : 'Aumentar cantidad'}
+                      >
+                        <i className="bi bi-plus"></i>
+                      </button>
+                    </div>
 
                   <strong className="carrito-subtotal">
                     {formatearPrecio(producto.precio * producto.cantidad)}
@@ -250,8 +287,9 @@ export default function Carrito({
                     <i className="bi bi-trash"></i>
                   </button>
                 </article>
-              ))}
-            </div>
+              )
+            })}
+          </div>
 
             {/* FORMULARIO DE CHECKOUT (DATOS DE ENTREGA Y PAGO) */}
             <form
