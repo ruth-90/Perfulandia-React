@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router'
 import '../styles/navbar.css'
 
-export default function Navbar() {
+export default function Navbar({ cantidadCarrito = 0 }) {
     return (
         <>
             {/* Banner de envío gratis */}
@@ -98,7 +98,7 @@ export default function Navbar() {
                                 >
                                     <i className="bi bi-bag"></i>
                                     <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill contador-carrito">
-                                        0
+                                        {cantidadCarrito}
                                     </span>
                                 </NavLink>
 
