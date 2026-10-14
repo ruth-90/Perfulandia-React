@@ -1,6 +1,18 @@
-import { NavLink, Link } from 'react-router'
+import { NavLink, Link, useNavigate } from 'react-router'
 
 export default function AdminSidebar({ paginaActiva = 'inicio' }) {
+  const navigate = useNavigate()
+
+  // CERRAR SESIÓN DEL ADMINISTRADOR
+  function cerrarSesion() {
+
+    // Eliminar la sesión de demostración
+    sessionStorage.removeItem('adminActivo')
+
+    // Regresar al Login
+    navigate('/login', { replace: true })
+  }
+
   return (
     <aside className="admin-sidebar">
       {/* LOGO */}
@@ -93,6 +105,17 @@ export default function AdminSidebar({ paginaActiva = 'inicio' }) {
           <i className="bi bi-shop"></i>
           <span>Volver a la tienda</span>
         </Link>
+        
+        {/* CERRAR SESIÓN */}
+        <button
+          type="button"
+          className="admin-menu-link admin-menu-tienda w-100 border-0 text-start"
+          onClick={cerrarSesion}
+        >
+          <i className="bi bi-box-arrow-right"></i>
+          <span>Cerrar sesión</span>
+        </button>
+
       </nav>
     </aside>
   )

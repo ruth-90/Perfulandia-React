@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation } from 'react-router'
+import { Routes, Route, Navigate, useLocation } from 'react-router'
 import { useState, useEffect } from 'react'
 
 import Navbar from './components/Navbar.jsx'
@@ -18,14 +18,19 @@ import Carrito from './pages/Carrito.jsx'
 import AdminDashboard from './pages/admin/AdminDashboard.jsx'
 import AdminProductos from './pages/admin/AdminProductos.jsx'
 import AdminProductoForm from './pages/admin/AdminProductoForm.jsx'
+// VISTA DE ADMINISTRACIÓN DE USUARIOS (RUTH)
+import AdminUsuarios from './pages/admin/AdminUsuarios.jsx'
+import AdminUsuarioForm from './pages/admin/AdminUsuarioForm.jsx'
 import { obtenerProductoPorId } from './services/productosStorage.js'
-
+  
 import './App.css'
 
 export default function App() {
   const location = useLocation()
   const esAdmin = location.pathname.startsWith('/admin')
-
+  // COMPROBAR SESIÓN DEL ADMINISTRADOR DE DEMOSTRACIÓN
+  const adminActivo = sessionStorage.getItem('adminActivo') === 'true'
+  
   // ESTADO DEL CARRITO CON PERSISTENCIA EN LOCALSTORAGE
   const [carrito, setCarrito] = useState(() => {
     try {
@@ -186,9 +191,12 @@ export default function App() {
           />
 
           {/* MÓDULOS DE ADMINISTRACIÓN (DARLING) */}
-          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin" element={adminActivo?<AdminDashboard /> : <Navigate to="/login" replace /> }/>
           <Route path="/admin/productos" element={<AdminProductos />} />
           <Route path="/admin/producto-form" element={<AdminProductoForm />} />
+          {/* ADMINISTRACIÓN DE USUARIOS (RUTH) */}
+          <Route path="/admin/usuarios" element={adminActivo ? <AdminUsuarios /> : <Navigate to="/login" replace />} />
+          <Route path="/admin/usuario-form" element={adminActivo ? <AdminUsuarioForm /> : <Navigate to="/login" replace />} />
         </Routes>
       </main>
 
