@@ -1,8 +1,9 @@
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
+import { usuariosDemo } from '../data/usuariosDemo'
 
-export default function LoginForm() {
+export default function LoginForm({ onLogin }) {
 
   // ESTADOS DEL FORMULARIO
   const [correo, setCorreo] = useState('')
@@ -16,13 +17,12 @@ export default function LoginForm() {
   const [correoValidado, setCorreoValidado] = useState(false)
   const [contrasenaValidada, setContrasenaValidada] = useState(false)
 
-  // MENSAJE DE INICIO DE SESIÓN
+  // MENSAJES DEL LOGIN
   const [mensajeLogin, setMensajeLogin] = useState('')
   const [tipoMensaje, setTipoMensaje] = useState('')
 
-  // NAVEGACIÓN DE REACT ROUTER
+  // NAVEGACIÓN
   const navigate = useNavigate()
-
 
   // VALIDAR CORREO
   function validarCorreo(correoValor) {
@@ -65,8 +65,7 @@ export default function LoginForm() {
     if (!dominioValido) {
       return {
         valido: false,
-        mensaje:
-          'Solo se permiten correos @duoc.cl, @profesor.duoc.cl o @gmail.com.'
+        mensaje: 'Solo se permiten correos @duoc.cl, @profesor.duoc.cl o @gmail.com.'
       }
     }
 
@@ -75,7 +74,6 @@ export default function LoginForm() {
       mensaje: ''
     }
   }
-
 
   // VALIDAR CONTRASEÑA
   function validarContrasena(contrasenaValor) {
@@ -107,7 +105,6 @@ export default function LoginForm() {
     }
   }
 
-
   // VALIDAR CORREO AL SALIR DEL CAMPO
   function validarCampoCorreo() {
 
@@ -116,7 +113,6 @@ export default function LoginForm() {
     setErrorCorreo(resultado.mensaje)
     setCorreoValidado(true)
   }
-
 
   // VALIDAR CONTRASEÑA AL SALIR DEL CAMPO
   function validarCampoContrasena() {
@@ -127,34 +123,13 @@ export default function LoginForm() {
     setContrasenaValidada(true)
   }
 
-  // BUSCAR CLIENTE REGISTRADO
-  function buscarClienteRegistrado(correoBuscado) {
-    try {
-      const usuariosGuardados = JSON.parse(
-        localStorage.getItem('usuarios') || '[]'
-      )
-
-      if (!Array.isArray(usuariosGuardados)) {
-        return null
-      }
-
-      return usuariosGuardados.find(
-        usuario =>
-          usuario.correo?.toLowerCase() ===
-          correoBuscado.trim().toLowerCase()
-      ) || null
-
-    } catch {
-      return null
-    }
-  }
-
-  // ENVÍO DEL FORMULARIO
+  // PROCESAR INICIO DE SESIÓN
   function manejarEnvio(evento) {
 
     evento.preventDefault()
 
     setMensajeLogin('')
+    setTipoMensaje('')
 
     const resultadoCorreo = validarCorreo(correo)
     const resultadoContrasena = validarContrasena(contrasena)
@@ -165,64 +140,71 @@ export default function LoginForm() {
     setCorreoValidado(true)
     setContrasenaValidada(true)
 
+    // DETENER SI LOS DATOS NO SON VÁLIDOS
     if (!resultadoCorreo.valido || !resultadoContrasena.valido) {
       return
     }
 
     const correoLogin = correo.trim().toLowerCase()
-    const contrasenaLogin = contrasena.trim()
+    const contrasenaLogin = contrasena
 
-    // INGRESO ADMINISTRADOR DE DEMOSTRACIÓN
+    // BUSCAR USUARIO DE DEMOSTRACIÓN
+    const usuarioEncontrado = usuariosDemo.find(
+      usuario => usuario.correo.toLowerCase() === correoLogin
+    )
+
+    // COMPROBAR CREDENCIALES
     if (
-      correoLogin === 'admin@duoc.cl' &&
-      contrasenaLogin === '1234'
+      !usuarioEncontrado ||
+      usuarioEncontrado.contrasena !== contrasenaLogin
     ) {
+      setTipoMensaje('danger')
+      setMensajeLogin('Correo o contraseña incorrectos.')
+      return
+    }
 
+    // INGRESO ADMINISTRADOR
+    if (usuarioEncontrado.rol === 'Administrador') {
+
+      // ELIMINAR SESIÓN DEL CLIENTE ANTERIOR
       localStorage.removeItem('clienteActivo')
+
+      // ACTUALIZAR ESTADO EN APP.JSX
+      onLogin?.(null)
+
+      // GUARDAR SESIÓN ADMINISTRATIVA
+      sessionStorage.setItem('adminActivo', 'true')
 
       setTipoMensaje('success')
       setMensajeLogin('Ingreso administrador correcto.')
 
-      // Esta ruta se configurará cuando creemos el panel
       navigate('/admin')
-
       return
     }
 
-
-    // BUSCAR AL CLIENTE REGISTRADO
-    const clienteRegistrado = buscarClienteRegistrado(correoLogin)
-
-    // COMPROBAR QUE EXISTA LA CUENTA
-    if (!clienteRegistrado) {
-      setTipoMensaje('danger')
-      setMensajeLogin(
-        'Este correo no está registrado. Primero debes crear una cuenta.'
-      )
-      return
+    // INGRESO CLIENTE
+    const cliente = {
+      nombre: usuarioEncontrado.nombre,
+      correo: usuarioEncontrado.correo
     }
 
-    // INGRESO CLIENTE DE DEMOSTRACIÓN
-    // Todavía no verificamos la contraseña.
+    // GUARDAR SESIÓN DEL CLIENTE
     localStorage.setItem(
       'clienteActivo',
-      JSON.stringify({
-        nombre: `${clienteRegistrado.nombre} ${clienteRegistrado.apellidos}`,
-        correo: clienteRegistrado.correo
-      })
+      JSON.stringify(cliente)
     )
+
+    // LIMPIAR SESIÓN ADMINISTRATIVA ANTERIOR
+    sessionStorage.removeItem('adminActivo')
+
+    // INFORMAR A APP.JSX DEL USUARIO CONECTADO
+    onLogin?.(cliente)
 
     setTipoMensaje('success')
     setMensajeLogin('Ingreso cliente correcto.')
 
     navigate('/productos')
-
-    setMensajeLogin('Ingreso cliente correcto.')
-
-    // Esta ruta se configurará cuando creemos el catálogo
-    navigate('/productos')
   }
-
 
   return (
     <form onSubmit={manejarEnvio} noValidate>
@@ -237,12 +219,13 @@ export default function LoginForm() {
         <input
           type="email"
           id="correo"
-          className={`form-control ${correoValidado
-            ? errorCorreo
-              ? 'is-invalid'
-              : 'is-valid'
-            : ''
-            }`}
+          className={`form-control ${
+            correoValidado
+              ? errorCorreo
+                ? 'is-invalid'
+                : 'is-valid'
+              : ''
+          }`}
           placeholder="ejemplo@gmail.com"
           value={correo}
           maxLength={100}
@@ -250,22 +233,21 @@ export default function LoginForm() {
             setCorreo(evento.target.value)
             setCorreoValidado(false)
             setErrorCorreo('')
+            setMensajeLogin('')
           }}
           onBlur={validarCampoCorreo}
         />
 
-        {/* MENSAJE DE ERROR DEL CORREO */}
         <div className="invalid-feedback">
           {errorCorreo}
         </div>
 
-        {/* TEXTO DE AYUDA ORIGINAL */}
         <small className="form-text text-muted">
-          Puedes utilizar correos @duoc.cl, @profesor.duoc.cl o @gmail.com.
+          Puedes utilizar correos @duoc.cl,
+          @profesor.duoc.cl o @gmail.com.
         </small>
 
       </div>
-
 
       {/* CONTRASEÑA */}
       <div className="mb-3">
@@ -277,36 +259,35 @@ export default function LoginForm() {
         <input
           type={mostrarContrasena ? 'text' : 'password'}
           id="contrasena"
-          className={`form-control ${contrasenaValidada
-            ? errorContrasena
-              ? 'is-invalid'
-              : 'is-valid'
-            : ''
-            }`}
+          className={`form-control ${
+            contrasenaValidada
+              ? errorContrasena
+                ? 'is-invalid'
+                : 'is-valid'
+              : ''
+          }`}
           placeholder="Ingresa tu contraseña"
           value={contrasena}
           onChange={(evento) => {
             setContrasena(evento.target.value)
             setContrasenaValidada(false)
             setErrorContrasena('')
+            setMensajeLogin('')
           }}
           onBlur={validarCampoContrasena}
         />
 
-        {/* MENSAJE DE ERROR DE CONTRASEÑA */}
         <div className="invalid-feedback">
           {errorContrasena}
         </div>
 
-        {/* TEXTO DE AYUDA ORIGINAL */}
         <small className="form-text text-muted">
           La contraseña debe contener entre 4 y 10 caracteres.
         </small>
 
       </div>
 
-
-      {/* MOSTRAR / OCULTAR CONTRASEÑA */}
+      {/* MOSTRAR CONTRASEÑA */}
       <div className="form-check mb-3">
 
         <input
@@ -328,7 +309,6 @@ export default function LoginForm() {
 
       </div>
 
-
       {/* MENSAJE DE INICIO DE SESIÓN */}
       {mensajeLogin && (
         <div
@@ -338,7 +318,6 @@ export default function LoginForm() {
           {mensajeLogin}
         </div>
       )}
-
 
       {/* BOTÓN INICIAR SESIÓN */}
       <button

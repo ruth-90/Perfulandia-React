@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router'
 import { obtenerProductoPorId } from '../services/productosStorage.js'
 
@@ -15,17 +15,27 @@ export default function Carrito({
   carrito,
   onModificarCantidad,
   onEliminarProducto,
-  onVaciarCarrito
+  onVaciarCarrito,
+  usuarioActivo
 }) {
+  // VERIFICAR SI EL CLIENTE INICIÓ SESIÓN
+  const clienteConectado = Boolean(usuarioActivo)
+
   // Estados para formulario de Checkout
-  const [nombre, setNombre] = useState('')
-  const [correo, setCorreo] = useState('')
+  const [nombre, setNombre] = useState(usuarioActivo?.nombre || '')
+  const [correo, setCorreo] = useState(usuarioActivo?.correo || '')
   const [telefono, setTelefono] = useState('')
   const [region, setRegion] = useState('')
   const [comuna, setComuna] = useState('')
   const [direccion, setDireccion] = useState('')
   const [metodoPago, setMetodoPago] = useState('')
   const [errorValidacion, setErrorValidacion] = useState('')
+
+  // ACTUALIZAR DATOS CUANDO CAMBIA EL CLIENTE
+  useEffect(() => {
+    setNombre(usuarioActivo?.nombre || '')
+    setCorreo(usuarioActivo?.correo || '')
+  }, [usuarioActivo])
 
   // Estado para simulación de compra exitosa (según figura de la pauta)
   const [ordenCompra, setOrdenCompra] = useState(null)
@@ -274,22 +284,22 @@ export default function Carrito({
                       </button>
                     </div>
 
-                  <strong className="carrito-subtotal">
-                    {formatearPrecio(producto.precio * producto.cantidad)}
-                  </strong>
+                    <strong className="carrito-subtotal">
+                      {formatearPrecio(producto.precio * producto.cantidad)}
+                    </strong>
 
-                  <button
-                    type="button"
-                    className="carrito-eliminar"
-                    onClick={() => onEliminarProducto(producto.id)}
-                    aria-label="Eliminar producto"
-                  >
-                    <i className="bi bi-trash"></i>
-                  </button>
-                </article>
-              )
-            })}
-          </div>
+                    <button
+                      type="button"
+                      className="carrito-eliminar"
+                      onClick={() => onEliminarProducto(producto.id)}
+                      aria-label="Eliminar producto"
+                    >
+                      <i className="bi bi-trash"></i>
+                    </button>
+                  </article>
+                )
+              })}
+            </div>
 
             {/* FORMULARIO DE CHECKOUT (DATOS DE ENTREGA Y PAGO) */}
             <form
@@ -306,6 +316,19 @@ export default function Carrito({
                 <p className="section-subtitulo mb-1">Paso de Pago</p>
                 <h2 className="h4 fw-bold">Información de Entrega y Facturación</h2>
               </div>
+
+              {/* INFORMACIÓN DEL CLIENTE CONECTADO */}
+              {clienteConectado && (
+                <div className="alert alert-success mb-4">
+                  <i className="bi bi-person-check-fill me-2"></i>
+
+                  Bienvenido/a, <strong>{usuarioActivo.nombre}</strong>.
+
+                  <p className="mb-0 mt-2">
+                    Tus datos personales se han cargado automáticamente.
+                  </p>
+                </div>
+              )}
 
               {errorValidacion && (
                 <div className="alert alert-danger mb-4" role="alert">

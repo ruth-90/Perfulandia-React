@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation } from 'react-router'
+import { Routes, Route, Navigate, useLocation } from 'react-router'
 import { useState, useEffect } from 'react'
 
 import Navbar from './components/Navbar.jsx'
@@ -18,6 +18,9 @@ import Carrito from './pages/Carrito.jsx'
 import AdminDashboard from './pages/admin/AdminDashboard.jsx'
 import AdminProductos from './pages/admin/AdminProductos.jsx'
 import AdminProductoForm from './pages/admin/AdminProductoForm.jsx'
+// VISTA DE ADMINISTRACIÓN DE USUARIOS (RUTH)
+import AdminUsuarios from './pages/admin/AdminUsuarios.jsx'
+import AdminUsuarioForm from './pages/admin/AdminUsuarioForm.jsx'
 import { obtenerProductoPorId } from './services/productosStorage.js'
 
 import './App.css'
@@ -25,6 +28,23 @@ import './App.css'
 export default function App() {
   const location = useLocation()
   const esAdmin = location.pathname.startsWith('/admin')
+  // COMPROBAR SESIÓN DEL ADMINISTRADOR DE DEMOSTRACIÓN
+  const adminActivo = sessionStorage.getItem('adminActivo') === 'true'
+
+  // ESTADO DEL CLIENTE QUE INICIÓ SESIÓN
+  const [usuarioActivo, setUsuarioActivo] = useState(() => {
+    try {
+      const cliente = localStorage.getItem('clienteActivo')
+      return cliente ? JSON.parse(cliente) : null
+    } catch {
+      return null
+    }
+  })
+
+  // ACTUALIZAR EL CLIENTE CUANDO INICIA O CIERRA SESIÓN
+  function actualizarUsuarioActivo(usuario) {
+    setUsuarioActivo(usuario)
+  }
 
   // ESTADO DEL CARRITO CON PERSISTENCIA EN LOCALSTORAGE
   const [carrito, setCarrito] = useState(() => {
@@ -73,10 +93,10 @@ export default function App() {
         return carritoActual.map((item) =>
           item.id === producto.id
             ? {
-                ...item,
-                cantidad: cantidadFinal,
-                stock: stockMaximo
-              }
+              ...item,
+              cantidad: cantidadFinal,
+              stock: stockMaximo
+            }
             : item
         )
       }
@@ -141,7 +161,13 @@ export default function App() {
   return (
     <div className="d-flex flex-column min-vh-100">
       {/* Barra de navegación de la tienda (se oculta en panel admin) */}
-      {!esAdmin && <Navbar cantidadCarrito={cantidadCarrito} />}
+      {!esAdmin && (
+        <Navbar
+          cantidadCarrito={cantidadCarrito}
+          usuarioActivo={usuarioActivo}
+          onCerrarSesion={() => actualizarUsuarioActivo(null)}
+        />
+      )}
 
       {/* Contenido principal según la ruta */}
       <main className="flex-grow-1">
@@ -166,7 +192,14 @@ export default function App() {
           <Route path="/contacto" element={<Contacto />} />
 
           {/* AUTENTICACIÓN */}
-          <Route path="/login" element={<Login />} />
+          <Route
+            path="/login"
+            element={
+              <Login
+                onLogin={actualizarUsuarioActivo}
+              />
+            }
+          />
           <Route path="/registro" element={<Registro />} />
 
           {/* BLOG */}
@@ -181,14 +214,18 @@ export default function App() {
                 onModificarCantidad={modificarCantidad}
                 onEliminarProducto={eliminarProducto}
                 onVaciarCarrito={vaciarCarrito}
+                usuarioActivo={usuarioActivo}
               />
             }
           />
 
           {/* MÓDULOS DE ADMINISTRACIÓN (DARLING) */}
-          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin" element={adminActivo ? <AdminDashboard /> : <Navigate to="/login" replace />} />
           <Route path="/admin/productos" element={<AdminProductos />} />
           <Route path="/admin/producto-form" element={<AdminProductoForm />} />
+          {/* ADMINISTRACIÓN DE USUARIOS (RUTH) */}
+          <Route path="/admin/usuarios" element={adminActivo ? <AdminUsuarios /> : <Navigate to="/login" replace />} />
+          <Route path="/admin/usuario-form" element={adminActivo ? <AdminUsuarioForm /> : <Navigate to="/login" replace />} />
         </Routes>
       </main>
 
