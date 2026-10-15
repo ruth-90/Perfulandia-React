@@ -1,124 +1,348 @@
-/* =====================================
-   NAVBAR - PERFULANDIA
-===================================== */
 
-.navbar-perfulandia {
-    background-color: var(--blanco);
+/* =====================================================
+   PERFULANDIA - NAVBAR COMPLETO
+   Diseño rosado, blanco y minimalista
+===================================================== */
 
-    padding-top: 15px;
-    padding-bottom: 15px;
 
-    border-bottom: 1px solid #eeeeee;
-}
-
-/* Logo */
-
-.logo {
-    width: 190px;
-    height: auto;
-
-    transform: scale(1.4);
-    transform-origin: left center;
-
-    margin-left: -55px;
-    margin-right: 55px;
-}
-
-/* Enlaces del menú */
-
-.navbar .nav-link {
-    color: var(--texto);
-
-    margin-left: 14px;
-    margin-right: 14px;
-
-    font-size: 1.15rem;
-    font-weight: 500;
-
-    transition: 0.3s;
-}
-
-.navbar .nav-link:hover {
-    color: var(--rosa-oscuro);
-}
-
-.navbar .nav-link.active {
-    color: var(--rosa-oscuro);
-    font-weight: 600;
-}
-
-/* Botón Ingresar */
-
-.btn-outline-perfulandia {
-    font-size: 1.05rem;
-    background-color: transparent;
-
-    border: 1px solid var(--rosa-principal);
-    color: var(--rosa-oscuro);
-
-    border-radius: 30px;
-    padding-left: 22px;
-    padding-right: 22px;
-
-    transition: 0.3s;
-}
-
-.btn-outline-perfulandia:hover {
-    background-color: var(--rosa-principal);
-    color: var(--blanco);
-}
-
-/* Carrito */
-
-.carrito-link {
-    font-size: 1.7rem;
-    color: var(--texto);
-}
-
-.carrito-link:hover {
-    color: var(--rosa-oscuro);
-}
-
-.contador-carrito {
-    background-color: var(--rosa-principal);
-    color: white;
-    font-size: 0.65rem;
-}
-
-/* =====================================
-   BANNER PROMOCIONAL - PERFULANDIA
-===================================== */
+/* =====================================================
+   1. BANNER DE ENVÍO GRATIS
+   MOVIMIENTO CONTINUO E INFINITO
+===================================================== */
 
 .banner-envio {
-    width: 100%;
-    overflow: hidden;
-    background-color: var(--rosa-principal);
-    color: var(--blanco);
-    padding: 10px 0;
+  width: 100%;
+  overflow: hidden;
+  background-color: #d9a7b2;
+  padding: 12px 0;
+  position: relative;
 }
 
 .banner-envio-track {
-    display: flex;
-    width: max-content;
-    align-items: center;
-    gap: 60px;
-    white-space: nowrap;
-    animation: desplazarBanner 25s linear infinite;
+  display: flex;
+  align-items: center;
+  width: max-content;
+  flex-wrap: nowrap;
+
+  animation: bannerContinuo 90s linear infinite;
+  will-change: transform;
 }
 
-.banner-envio-track span {
+/* Dos grupos idénticos para lograr continuidad */
+.banner-envio-lista {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 45px;
+  padding-right: 45px;
+  box-sizing: border-box;
+}
+
+/* Letras del banner */
+.banner-item {
+  display: inline-block;
+  flex: 0 0 auto;
+  white-space: nowrap;
+
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  line-height: 1.4;
+}
+
+/* Animación infinita */
+@keyframes bannerContinuo {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+
+/* =====================================================
+   2. NAVBAR PRINCIPAL
+===================================================== */
+
+.navbar-perfulandia {
+  background-color: #ffffff;
+  width: 100%;
+  padding: 15px 0;
+
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+
+/* =====================================================
+   3. LOGO PERFULANDIA
+===================================================== */
+
+.navbar-perfulandia .navbar-brand {
+  display: flex;
+  align-items: center;
+  margin-right: 25px;
+}
+
+.navbar-perfulandia .logo {
+  width: 200px;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+
+/* =====================================================
+   4. ENLACES DEL MENÚ
+===================================================== */
+
+.navbar-perfulandia .navbar-nav {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.navbar-perfulandia .nav-item {
+  list-style: none;
+}
+
+.navbar-perfulandia .nav-link {
+  color: #333333;
+  font-size: 17px;
+  font-weight: 500;
+  text-decoration: none;
+
+  transition: color 0.3s ease;
+}
+
+.navbar-perfulandia .nav-link:hover {
+  color: #c98596;
+}
+
+.navbar-perfulandia .nav-link.active {
+  color: #c98596;
+}
+
+
+/* =====================================================
+   5. BOTÓN INGRESAR / USUARIO
+===================================================== */
+
+.btn-outline-perfulandia {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+
+  background-color: transparent;
+  border: 1px solid #d9a7b2;
+  border-radius: 30px;
+
+  padding: 8px 20px;
+
+  color: #c98596;
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-outline-perfulandia:hover {
+  background-color: #d9a7b2;
+  border-color: #d9a7b2;
+  color: #ffffff;
+}
+
+.btn-outline-perfulandia:focus {
+  box-shadow: 0 0 0 3px rgba(217, 167, 178, 0.25);
+}
+
+
+/* =====================================================
+   6. MENÚ DESPLEGABLE DEL CLIENTE
+===================================================== */
+
+.navbar-perfulandia .dropdown {
+  position: relative;
+}
+
+.navbar-perfulandia .dropdown-menu {
+  background-color: #ffffff;
+  border: 1px solid #f0e1e5;
+  border-radius: 12px;
+
+  padding: 10px;
+  min-width: 220px;
+
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.navbar-perfulandia .dropdown-item-text {
+  color: #777777;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.navbar-perfulandia .dropdown-divider {
+  border-color: #f0e1e5;
+}
+
+.navbar-perfulandia .dropdown-item {
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 14px;
+
+  transition: background-color 0.2s ease;
+}
+
+.navbar-perfulandia .dropdown-item:hover {
+  background-color: #f9edf0;
+}
+
+
+/* =====================================================
+   7. CARRITO DE COMPRAS
+===================================================== */
+
+.carrito-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  position: relative;
+
+  color: #333333;
+  text-decoration: none;
+  font-size: 25px;
+
+  transition: color 0.3s ease;
+}
+
+.carrito-link:hover {
+  color: #c98596;
+}
+
+/* Contador de productos */
+.contador-carrito {
+  background-color: #d9a7b2;
+  color: #ffffff;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  min-width: 19px;
+  min-height: 19px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+}
+
+
+/* =====================================================
+   8. BOTÓN MENÚ RESPONSIVO
+===================================================== */
+
+.navbar-perfulandia .navbar-toggler {
+  border: 1px solid #d9a7b2;
+  border-radius: 8px;
+  padding: 7px 11px;
+}
+
+.navbar-perfulandia .navbar-toggler:focus {
+  box-shadow: 0 0 0 3px rgba(217, 167, 178, 0.2);
+}
+
+
+/* =====================================================
+   9. RESPONSIVE TABLETS
+===================================================== */
+
+@media (max-width: 991px) {
+
+  .navbar-perfulandia .container-fluid {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+
+  .navbar-perfulandia .logo {
+    width: 165px;
+  }
+
+  .navbar-perfulandia .navbar-nav {
+    align-items: flex-start;
+    gap: 5px;
+    margin-top: 15px;
+  }
+
+  .navbar-perfulandia .collapse .d-flex {
+    margin-top: 15px;
+    margin-bottom: 10px;
+  }
+
+}
+
+
+/* =====================================================
+   10. RESPONSIVE CELULARES
+===================================================== */
+
+@media (max-width: 768px) {
+
+  /* Banner */
+  .banner-envio {
+    padding: 10px 0;
+  }
+
+  .banner-envio-lista {
+    gap: 35px;
+    padding-right: 35px;
+  }
+
+  .banner-item {
     font-size: 14px;
-    font-weight: 600;
-    letter-spacing: 1px;
+    letter-spacing: 0.3px;
+  }
+
+  /* Logo */
+  .navbar-perfulandia .logo {
+    width: 150px;
+  }
+
+  /* Menú */
+  .navbar-perfulandia .nav-link {
+    font-size: 16px;
+  }
+
+  /* Botón de usuario */
+  .btn-outline-perfulandia {
+    font-size: 14px;
+    padding: 7px 15px;
+  }
+
+  /* Carrito */
+  .carrito-link {
+    font-size: 23px;
+  }
+
 }
 
-/* Animación de desplazamiento */
-@keyframes desplazarBanner {
-    from {
-        transform: translateX(0);
-    }
 
-    to {
-        transform: translateX(-50%);
-    }
+/* =====================================================
+   11. ACCESIBILIDAD
+===================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .banner-envio-track {
+    animation: none;
+  }
+
 }

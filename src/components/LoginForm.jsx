@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { usuariosDemo } from '../data/usuariosDemo'
 
-export default function LoginForm() {
+export default function LoginForm({ onLogin }) {
 
   // ESTADOS DEL FORMULARIO
   const [correo, setCorreo] = useState('')
@@ -17,11 +17,11 @@ export default function LoginForm() {
   const [correoValidado, setCorreoValidado] = useState(false)
   const [contrasenaValidada, setContrasenaValidada] = useState(false)
 
-  // MENSAJE DE INICIO DE SESIÓN
+  // MENSAJES DEL LOGIN
   const [mensajeLogin, setMensajeLogin] = useState('')
   const [tipoMensaje, setTipoMensaje] = useState('')
 
-  // NAVEGACIÓN DE REACT ROUTER
+  // NAVEGACIÓN
   const navigate = useNavigate()
 
   // VALIDAR CORREO
@@ -123,7 +123,7 @@ export default function LoginForm() {
     setContrasenaValidada(true)
   }
 
-  // ENVÍO DEL FORMULARIO
+  // PROCESAR INICIO DE SESIÓN
   function manejarEnvio(evento) {
 
     evento.preventDefault()
@@ -140,7 +140,7 @@ export default function LoginForm() {
     setCorreoValidado(true)
     setContrasenaValidada(true)
 
-    // DETENER SI LOS CAMPOS NO SON VÁLIDOS
+    // DETENER SI LOS DATOS NO SON VÁLIDOS
     if (!resultadoCorreo.valido || !resultadoContrasena.valido) {
       return
     }
@@ -148,12 +148,12 @@ export default function LoginForm() {
     const correoLogin = correo.trim().toLowerCase()
     const contrasenaLogin = contrasena
 
-    // BUSCAR EL USUARIO EN LOS DATOS DE DEMOSTRACIÓN
+    // BUSCAR USUARIO DE DEMOSTRACIÓN
     const usuarioEncontrado = usuariosDemo.find(
       usuario => usuario.correo.toLowerCase() === correoLogin
     )
 
-    // COMPROBAR CORREO Y CONTRASEÑA
+    // COMPROBAR CREDENCIALES
     if (
       !usuarioEncontrado ||
       usuarioEncontrado.contrasena !== contrasenaLogin
@@ -163,14 +163,16 @@ export default function LoginForm() {
       return
     }
 
-
-    // INGRESO ADMINISTRADOR DE DEMOSTRACIÓN
+    // INGRESO ADMINISTRADOR
     if (usuarioEncontrado.rol === 'Administrador') {
 
-      // Limpiar una posible sesión anterior de cliente
+      // ELIMINAR SESIÓN DEL CLIENTE ANTERIOR
       localStorage.removeItem('clienteActivo')
 
-      // Guardar la sesión ficticia del administrador
+      // ACTUALIZAR ESTADO EN APP.JSX
+      onLogin?.(null)
+
+      // GUARDAR SESIÓN ADMINISTRATIVA
       sessionStorage.setItem('adminActivo', 'true')
 
       setTipoMensaje('success')
@@ -180,15 +182,23 @@ export default function LoginForm() {
       return
     }
 
+    // INGRESO CLIENTE
+    const cliente = {
+      nombre: usuarioEncontrado.nombre,
+      correo: usuarioEncontrado.correo
+    }
 
-    // INGRESO CLIENTE DE DEMOSTRACIÓN
+    // GUARDAR SESIÓN DEL CLIENTE
     localStorage.setItem(
       'clienteActivo',
-      JSON.stringify({
-        nombre: usuarioEncontrado.nombre,
-        correo: usuarioEncontrado.correo
-      })
+      JSON.stringify(cliente)
     )
+
+    // LIMPIAR SESIÓN ADMINISTRATIVA ANTERIOR
+    sessionStorage.removeItem('adminActivo')
+
+    // INFORMAR A APP.JSX DEL USUARIO CONECTADO
+    onLogin?.(cliente)
 
     setTipoMensaje('success')
     setMensajeLogin('Ingreso cliente correcto.')
@@ -228,13 +238,13 @@ export default function LoginForm() {
           onBlur={validarCampoCorreo}
         />
 
-        {/* MENSAJE DE ERROR DEL CORREO */}
         <div className="invalid-feedback">
           {errorCorreo}
         </div>
 
         <small className="form-text text-muted">
-          Puedes utilizar correos @duoc.cl, @profesor.duoc.cl o @gmail.com.
+          Puedes utilizar correos @duoc.cl,
+          @profesor.duoc.cl o @gmail.com.
         </small>
 
       </div>
@@ -267,7 +277,6 @@ export default function LoginForm() {
           onBlur={validarCampoContrasena}
         />
 
-        {/* MENSAJE DE ERROR DE CONTRASEÑA */}
         <div className="invalid-feedback">
           {errorContrasena}
         </div>
@@ -278,7 +287,7 @@ export default function LoginForm() {
 
       </div>
 
-      {/* MOSTRAR / OCULTAR CONTRASEÑA */}
+      {/* MOSTRAR CONTRASEÑA */}
       <div className="form-check mb-3">
 
         <input

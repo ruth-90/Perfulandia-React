@@ -2,7 +2,7 @@
 import LoginForm from '../components/LoginForm.jsx'
 import '../styles/login.css'
 
-export default function Login() {
+export default function Login({ onLogin }) {
   return (
     <section className="container py-5">
 
@@ -28,7 +28,7 @@ export default function Login() {
             </div>
 
             {/* Formulario de inicio de sesión */}
-            <LoginForm />
+            <LoginForm onLogin={onLogin} />
 
             {/* Enlace de registro */}
             <div className="text-center mt-4">
