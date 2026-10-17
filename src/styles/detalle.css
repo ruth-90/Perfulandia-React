@@ -1,36 +1,41 @@
+
 /* =========================================
    PERFULANDIA - DETALLE DEL PRODUCTO
 ========================================= */
 
 /* MIGA DE PAN */
 .detalle-breadcrumb {
-    background-color: var(--beige-claro);
+    background-color: var(--beige-claro, #f8f2ec);
     border-bottom: 1px solid #eeeeee;
 }
 
 .detalle-breadcrumb a {
-    color: var(--rosa-oscuro);
+    color: var(--rosa-oscuro, #c88798);
     font-weight: 500;
+    text-decoration: none;
 }
 
 .detalle-breadcrumb a:hover {
-    color: var(--texto);
+    color: var(--texto, #383838);
 }
 
 .detalle-breadcrumb span {
     margin: 0 8px;
-    color: var(--gris);
+    color: var(--gris, #777);
 }
 
-/* SECCIÓN PRINCIPAL */
+/* =========================================
+   SECCIÓN PRINCIPAL
+========================================= */
+
 .detalle-producto {
-    background-color: var(--blanco);
+    background-color: var(--blanco, #ffffff);
     min-height: 60vh;
 }
 
 /* IMAGEN DEL PERFUME */
 .detalle-imagen {
-    background-color: var(--rosa-claro);
+    background-color: var(--rosa-claro, #f8e6ea);
     padding: 35px;
     border-radius: 30px;
 
@@ -48,7 +53,10 @@
     border-radius: 15px;
 }
 
-/* INFORMACIÓN DEL PRODUCTO */
+/* =========================================
+   INFORMACIÓN DEL PRODUCTO
+========================================= */
+
 .detalle-informacion {
     padding: 10px 0;
 }
@@ -56,67 +64,193 @@
 .detalle-titulo {
     font-size: clamp(2rem, 4vw, 3rem);
     font-weight: 600;
-    color: var(--texto);
+    color: var(--texto, #383838);
     margin-bottom: 20px;
 }
 
 .detalle-precio {
     font-size: 2rem;
     font-weight: bold;
-    color: var(--rosa-oscuro);
+    color: var(--rosa-oscuro, #c88798);
     margin-bottom: 25px;
 }
 
 .detalle-descripcion {
     font-size: 1.05rem;
-    color: var(--gris);
+    color: var(--gris, #777);
     line-height: 1.8;
     margin-top: 25px;
 }
 
-/* CARACTERÍSTICAS */
+/* =========================================
+   CARACTERÍSTICAS DEL PRODUCTO
+========================================= */
+
 .detalle-caracteristicas {
     margin-top: 25px;
 }
 
 .detalle-caracteristicas p {
-    color: var(--texto);
+    color: var(--texto, #383838);
     margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .detalle-caracteristicas i {
-    color: var(--rosa-oscuro);
+    color: var(--rosa-oscuro, #c88798);
     font-size: 1.2rem;
-    margin-right: 10px;
+    margin-right: 5px;
 }
 
-/* SELECTOR DE CANTIDAD */
+/* =========================================
+   SELECTOR DE CANTIDAD
+========================================= */
+
 .detalle-informacion .selector-cantidad {
-    margin-top: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 12px;
+    margin-bottom: 25px;
 }
 
+/* BOTONES MENOS Y MÁS */
+.detalle-informacion .btn-cantidad {
+    width: 44px;
+    height: 44px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    background-color: var(--rosa-claro, #f8e6ea);
+    color: var(--rosa-oscuro, #c88798);
+
+    border: 1px solid var(--rosa-oscuro, #c88798);
+    border-radius: 50%;
+
+    font-size: 1.5rem;
+    font-weight: 500;
+    line-height: 1;
+
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+/* EFECTO HOVER */
+.detalle-informacion .btn-cantidad:hover:not(:disabled) {
+    background-color: var(--rosa-oscuro, #c88798);
+    color: #ffffff;
+    border-color: var(--rosa-oscuro, #c88798);
+    transform: scale(1.08);
+}
+
+/* EFECTO AL PRESIONAR */
+.detalle-informacion .btn-cantidad:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+/* BOTÓN DESHABILITADO */
 .detalle-informacion .btn-cantidad:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* NÚMERO DE UNIDADES */
+.detalle-informacion .selector-cantidad .cantidad-numero,
+.detalle-informacion .selector-cantidad .cantidad-valor,
+.detalle-informacion .selector-cantidad span,
+.detalle-informacion .selector-cantidad input {
+    min-width: 40px;
+    text-align: center;
+
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--texto, #383838);
+}
+
+/* SI SE UTILIZA INPUT */
+.detalle-informacion .selector-cantidad input {
+    width: 50px;
+    height: 44px;
+
+    border: 1px solid #ead0d6;
+    border-radius: 12px;
+    background-color: #ffffff;
+    outline: none;
+}
+
+/* =========================================
+   BOTÓN AÑADIR AL CARRITO
+========================================= */
+
+.detalle-informacion .btn-perfulandia {
+    background-color: var(--rosa-oscuro, #d9a6b0);
+    color: #ffffff;
+
+    border: 2px solid var(--rosa-oscuro, #d9a6b0);
+    border-radius: 50px;
+
+    padding: 14px 25px;
+
+    font-size: 1.1rem;
+    font-weight: 500;
+
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.detalle-informacion .btn-perfulandia:hover:not(:disabled) {
+    background-color: #bc8291;
+    border-color: #bc8291;
+    color: #ffffff;
+
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(188, 130, 145, 0.25);
+}
+
+.detalle-informacion .btn-perfulandia:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
 
-/* BOTONES */
-.detalle-informacion .btn-perfulandia,
+/* BOTÓN SECUNDARIO */
 .detalle-informacion .btn-outline-perfulandia {
-    border-radius: 30px;
+    background-color: transparent;
+    color: var(--rosa-oscuro, #c88798);
+
+    border: 2px solid var(--rosa-oscuro, #c88798);
+    border-radius: 50px;
+
+    padding: 12px 25px;
+    font-weight: 500;
+
+    transition: all 0.3s ease;
 }
 
-/* PRODUCTO NO ENCONTRADO */
-.icono-error-producto {
-    font-size: 4rem;
-    color: var(--rosa-oscuro);
+.detalle-informacion .btn-outline-perfulandia:hover {
+    background-color: var(--rosa-oscuro, #c88798);
+    color: #ffffff;
 }
 
 /* =========================================
-   RESPONSIVE
+   PRODUCTO NO ENCONTRADO
+========================================= */
+
+.icono-error-producto {
+    font-size: 4rem;
+    color: var(--rosa-oscuro, #c88798);
+}
+
+/* =========================================
+   RESPONSIVE - TABLET
 ========================================= */
 
 @media (max-width: 991px) {
+
     .detalle-imagen {
         min-height: 400px;
     }
@@ -130,7 +264,12 @@
     }
 }
 
+/* =========================================
+   RESPONSIVE - CELULAR
+========================================= */
+
 @media (max-width: 576px) {
+
     .detalle-imagen {
         padding: 20px;
         min-height: 300px;
@@ -146,5 +285,21 @@
 
     .detalle-precio {
         font-size: 1.6rem;
+    }
+
+    .detalle-informacion .btn-cantidad {
+        width: 40px;
+        height: 40px;
+        font-size: 1.3rem;
+    }
+
+    .detalle-informacion .selector-cantidad {
+        gap: 10px;
+    }
+
+    .detalle-informacion .btn-perfulandia {
+        width: 100%;
+        padding: 13px 20px;
+        font-size: 1rem;
     }
 }
