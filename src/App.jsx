@@ -1,3 +1,4 @@
+
 import { Routes, Route, Navigate, useLocation } from 'react-router'
 import { useState, useEffect } from 'react'
 
@@ -14,20 +15,25 @@ import Registro from './pages/Registro.jsx'
 import Blogs from './pages/Blogs.jsx'
 import Carrito from './pages/Carrito.jsx'
 
-// Vistas de Administración (Módulos de Darling)
+// VISTAS DE ADMINISTRACIÓN (MÓDULOS DE DARLING)
 import AdminDashboard from './pages/admin/AdminDashboard.jsx'
 import AdminProductos from './pages/admin/AdminProductos.jsx'
 import AdminProductoForm from './pages/admin/AdminProductoForm.jsx'
-// VISTA DE ADMINISTRACIÓN DE USUARIOS (RUTH)
+
+// VISTAS DE ADMINISTRACIÓN DE USUARIOS (RUTH)
 import AdminUsuarios from './pages/admin/AdminUsuarios.jsx'
 import AdminUsuarioForm from './pages/admin/AdminUsuarioForm.jsx'
+
 import { obtenerProductoPorId } from './services/productosStorage.js'
 
 import './App.css'
 
 export default function App() {
   const location = useLocation()
+
+  // IDENTIFICAR SI ESTAMOS EN UNA RUTA ADMINISTRATIVA
   const esAdmin = location.pathname.startsWith('/admin')
+
   // COMPROBAR SESIÓN DEL ADMINISTRADOR DE DEMOSTRACIÓN
   const adminActivo = sessionStorage.getItem('adminActivo') === 'true'
 
@@ -52,6 +58,7 @@ export default function App() {
       const guardado = JSON.parse(
         localStorage.getItem('carrito') || '[]'
       )
+
       return Array.isArray(guardado) ? guardado : []
     } catch {
       return []
@@ -69,7 +76,10 @@ export default function App() {
       Number.isInteger(cantidad) && cantidad > 0 ? cantidad : 1
 
     const prodBd = obtenerProductoPorId(producto.id)
-    const stockMaximo = prodBd ? Number(prodBd.stock ?? 0) : Number(producto.stock ?? 99)
+
+    const stockMaximo = prodBd
+      ? Number(prodBd.stock ?? 0)
+      : Number(producto.stock ?? 99)
 
     if (stockMaximo <= 0) {
       alert(`Lo sentimos, "${producto.nombre}" está agotado en inventario.`)
@@ -83,25 +93,36 @@ export default function App() {
 
       if (productoExistente) {
         if (productoExistente.cantidad >= stockMaximo) {
-          alert(`Ya tienes el stock máximo disponible (${stockMaximo} un.) de "${producto.nombre}" en el carrito.`)
+          alert(
+            `Ya tienes el stock máximo disponible (${stockMaximo} un.) de "${producto.nombre}" en el carrito.`
+          )
           return carritoActual
         }
 
-        const cantidadDeseada = Number(productoExistente.cantidad || 0) + cantidadAgregar
-        const cantidadFinal = Math.min(cantidadDeseada, stockMaximo)
+        const cantidadDeseada =
+          Number(productoExistente.cantidad || 0) + cantidadAgregar
+
+        const cantidadFinal = Math.min(
+          cantidadDeseada,
+          stockMaximo
+        )
 
         return carritoActual.map((item) =>
           item.id === producto.id
             ? {
-              ...item,
-              cantidad: cantidadFinal,
-              stock: stockMaximo
-            }
+                ...item,
+                cantidad: cantidadFinal,
+                stock: stockMaximo
+              }
             : item
         )
       }
 
-      const cantidadInicial = Math.min(cantidadAgregar, stockMaximo)
+      const cantidadInicial = Math.min(
+        cantidadAgregar,
+        stockMaximo
+      )
+
       return [
         ...carritoActual,
         {
@@ -116,7 +137,7 @@ export default function App() {
     })
   }
 
-  // MODIFICAR CANTIDAD DE UN PRODUCTO (+1 o -1) CON CONTROL DE STOCK
+  // MODIFICAR CANTIDAD DE UN PRODUCTO (+1 O -1)
   function modificarCantidad(id, cambio) {
     const prodBd = obtenerProductoPorId(id)
 
@@ -124,16 +145,25 @@ export default function App() {
       carritoActual
         .map((item) => {
           if (item.id === id) {
-            const stockMaximo = prodBd ? Number(prodBd.stock ?? 0) : Number(item.stock ?? 99)
-            const nuevaCantidad = Number(item.cantidad || 1) + cambio
+            const stockMaximo = prodBd
+              ? Number(prodBd.stock ?? 0)
+              : Number(item.stock ?? 99)
 
-            // Si intenta aumentar y supera el stock disponible, no permitir
+            const nuevaCantidad =
+              Number(item.cantidad || 1) + cambio
+
+            // IMPEDIR SUPERAR EL STOCK DISPONIBLE
             if (cambio > 0 && nuevaCantidad > stockMaximo) {
               return item
             }
 
-            return { ...item, cantidad: nuevaCantidad, stock: stockMaximo }
+            return {
+              ...item,
+              cantidad: nuevaCantidad,
+              stock: stockMaximo
+            }
           }
+
           return item
         })
         .filter((item) => item.cantidad > 0)
@@ -154,13 +184,15 @@ export default function App() {
 
   // CANTIDAD TOTAL DE PRODUCTOS EN EL CARRITO
   const cantidadCarrito = carrito.reduce(
-    (total, producto) => total + Number(producto.cantidad || 0),
+    (total, producto) =>
+      total + Number(producto.cantidad || 0),
     0
   )
 
   return (
     <div className="d-flex flex-column min-vh-100">
-      {/* Barra de navegación de la tienda (se oculta en panel admin) */}
+
+      {/* BARRA DE NAVEGACIÓN DE LA TIENDA */}
       {!esAdmin && (
         <Navbar
           cantidadCarrito={cantidadCarrito}
@@ -169,29 +201,48 @@ export default function App() {
         />
       )}
 
-      {/* Contenido principal según la ruta */}
+      {/* CONTENIDO PRINCIPAL */}
       <main className="flex-grow-1">
         <Routes>
+
           {/* PÁGINA PRINCIPAL */}
-          <Route path="/" element={<Inicio />} />
+          <Route
+            path="/"
+            element={<Inicio />}
+          />
 
           {/* CATÁLOGO DE PRODUCTOS */}
           <Route
             path="/productos"
-            element={<Productos onAgregarProducto={agregarAlCarrito} />}
+            element={
+              <Productos
+                onAgregarProducto={agregarAlCarrito}
+              />
+            }
           />
 
           {/* DETALLE DE PRODUCTO */}
           <Route
             path="/producto-detalle"
-            element={<ProductoDetalle onAgregarProducto={agregarAlCarrito} />}
+            element={
+              <ProductoDetalle
+                onAgregarProducto={agregarAlCarrito}
+              />
+            }
           />
 
           {/* NOSOTROS Y CONTACTO */}
-          <Route path="/nosotros" element={<Nosotros />} />
-          <Route path="/contacto" element={<Contacto />} />
+          <Route
+            path="/nosotros"
+            element={<Nosotros />}
+          />
 
-          {/* AUTENTICACIÓN */}
+          <Route
+            path="/contacto"
+            element={<Contacto />}
+          />
+
+          {/* INICIO DE SESIÓN */}
           <Route
             path="/login"
             element={
@@ -200,12 +251,20 @@ export default function App() {
               />
             }
           />
-          <Route path="/registro" element={<Registro />} />
+
+          {/* REGISTRO */}
+          <Route
+            path="/registro"
+            element={<Registro />}
+          />
 
           {/* BLOG */}
-          <Route path="/blogs" element={<Blogs />} />
+          <Route
+            path="/blogs"
+            element={<Blogs />}
+          />
 
-          {/* CARRITO Y CHECKOUT */}
+          {/* CARRITO */}
           <Route
             path="/carrito"
             element={
@@ -219,18 +278,62 @@ export default function App() {
             }
           />
 
-          {/* MÓDULOS DE ADMINISTRACIÓN (DARLING) */}
-          <Route path="/admin" element={adminActivo ? <AdminDashboard /> : <Navigate to="/login" replace />} />
-          <Route path="/admin/productos" element={<AdminProductos />} />
-          <Route path="/admin/producto-form" element={<AdminProductoForm />} />
-          {/* ADMINISTRACIÓN DE USUARIOS (RUTH) */}
-          <Route path="/admin/usuarios" element={adminActivo ? <AdminUsuarios /> : <Navigate to="/login" replace />} />
-          <Route path="/admin/usuario-form" element={adminActivo ? <AdminUsuarioForm /> : <Navigate to="/login" replace />} />
+          {/* ADMINISTRACIÓN: DASHBOARD */}
+          <Route
+            path="/admin"
+            element={
+              adminActivo
+                ? <AdminDashboard />
+                : <Navigate to="/login" replace />
+            }
+          />
+
+          {/* ADMINISTRACIÓN: PRODUCTOS */}
+          <Route
+            path="/admin/productos"
+            element={
+              adminActivo
+                ? <AdminProductos />
+                : <Navigate to="/login" replace />
+            }
+          />
+
+          {/* ADMINISTRACIÓN: CREAR Y EDITAR PRODUCTOS */}
+          <Route
+            path="/admin/producto-form"
+            element={
+              adminActivo
+                ? <AdminProductoForm />
+                : <Navigate to="/login" replace />
+            }
+          />
+
+          {/* ADMINISTRACIÓN: USUARIOS */}
+          <Route
+            path="/admin/usuarios"
+            element={
+              adminActivo
+                ? <AdminUsuarios />
+                : <Navigate to="/login" replace />
+            }
+          />
+
+          {/* ADMINISTRACIÓN: CREAR Y EDITAR USUARIOS */}
+          <Route
+            path="/admin/usuario-form"
+            element={
+              adminActivo
+                ? <AdminUsuarioForm />
+                : <Navigate to="/login" replace />
+            }
+          />
+
         </Routes>
       </main>
 
-      {/* Pie de página de la tienda (se oculta en panel admin) */}
+      {/* PIE DE PÁGINA DE LA TIENDA */}
       {!esAdmin && <Footer />}
+
     </div>
   )
 }
