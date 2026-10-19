@@ -3,15 +3,15 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for styles/login.css</title>
+    <title>Code coverage report for src/pages/Registro.jsx</title>
     <meta charset="utf-8" />
-    <link rel="stylesheet" href="../prettify.css" />
-    <link rel="stylesheet" href="../base.css" />
-    <link rel="shortcut icon" type="image/x-icon" href="../favicon.png" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style type='text/css'>
         .coverage-summary .sorter {
-            background-image: url(../sort-arrow-sprite.png);
+            background-image: url(../../sort-arrow-sprite.png);
         }
     </style>
 </head>
@@ -19,34 +19,34 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../index.html">All files</a> / <a href="index.html">styles</a> login.css</h1>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/pages</a> Registro.jsx</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/0</span>
+                <span class='fraction'>1/1</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
                 <span class='fraction'>0/0</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/0</span>
+                <span class='fraction'>1/1</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/0</span>
+                <span class='fraction'>1/1</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -118,29 +118,13 @@
 <a name='L53'></a><a href='#L53'>53</a>
 <a name='L54'></a><a href='#L54'>54</a>
 <a name='L55'></a><a href='#L55'>55</a>
-<a name='L56'></a><a href='#L56'>56</a>
-<a name='L57'></a><a href='#L57'>57</a>
-<a name='L58'></a><a href='#L58'>58</a>
-<a name='L59'></a><a href='#L59'>59</a>
-<a name='L60'></a><a href='#L60'>60</a>
-<a name='L61'></a><a href='#L61'>61</a>
-<a name='L62'></a><a href='#L62'>62</a>
-<a name='L63'></a><a href='#L63'>63</a>
-<a name='L64'></a><a href='#L64'>64</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L56'></a><a href='#L56'>56</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -190,67 +174,59 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">&nbsp;
-/* =====================================
-   LOGIN - PERFULANDIA
-===================================== */
+import { Link } from 'react-router'
+import RegistroForm from '../components/RegistroForm.jsx'
+import '../styles/registro.css'
 &nbsp;
-/* Tarjeta del formulario */
-.login-card {
-    border-radius: 15px;
-}
+export default function Registro() {
+  return (
+    &lt;section className="container py-5"&gt;
 &nbsp;
-/* Logo del login */
-.logo-login {
-    display: block;
-    width: 150px;
-    max-width: 100%;
-    height: auto;
-    margin: 0 auto 20px;
-}
+      &lt;div className="row justify-content-center"&gt;
 &nbsp;
-/* Enlace para crear una cuenta */
-.link-registro {
-    color: var(--rosa-oscuro);
-    text-decoration: none;
-}
+        &lt;div className="col-12 col-md-8 col-lg-6"&gt;
 &nbsp;
-.link-registro:hover {
-    text-decoration: underline;
-}
+          &lt;div className="card registro-card shadow border-0 p-4 p-md-5"&gt;
 &nbsp;
-/* Fondo de la página Login */
-main:has(.login-card) {
-    background-color: #f4efe9;
-    min-height: 100vh;
-}
+            {/* ENCABEZADO */}
+            &lt;div className="text-center mb-4"&gt;
 &nbsp;
+              &lt;img
+                src="/img/Logo.png"
+                alt="Logo Perfulandia"
+                className="logo-registro"
+              /&gt;
 &nbsp;
-/* =====================================
-   BOTÓN INICIAR SESIÓN
-===================================== */
+              &lt;p className="text-secondary mb-0"&gt;
+                Crea tu cuenta
+              &lt;/p&gt;
 &nbsp;
-.login-card .btn-perfulandia {
-    background-color: #d9a7b0;
-    color: white;
-    border: 1px solid #d9a7b0;
-    border-radius: 10px;
-    padding: 12px;
-    font-size: 16px;
-    font-weight: 500;
-    transition: background-color 0.3s ease;
-}
+            &lt;/div&gt;
 &nbsp;
-/* Efecto al pasar el mouse */
-.login-card .btn-perfulandia:hover {
-    background-color: #bf8792;
-    border-color: #bf8792;
-    color: white;
-}
+            {/* FORMULARIO DE REGISTRO */}
+            &lt;RegistroForm /&gt;
 &nbsp;
-/* Efecto al seleccionar el botón */
-.login-card .btn-perfulandia:focus-visible {
-    outline: 2px solid #bf8792;
-    outline-offset: 3px;
+            {/* VOLVER AL LOGIN */}
+            &lt;div className="text-center mt-4"&gt;
+&nbsp;
+              &lt;p className="mb-1"&gt;
+                ¿Ya tienes una cuenta?
+              &lt;/p&gt;
+&nbsp;
+              &lt;Link to="/login" className="link-registro"&gt;
+                Iniciar sesión
+              &lt;/Link&gt;
+&nbsp;
+            &lt;/div&gt;
+&nbsp;
+          &lt;/div&gt;
+&nbsp;
+        &lt;/div&gt;
+&nbsp;
+      &lt;/div&gt;
+&nbsp;
+    &lt;/section&gt;
+  )
 }
 &nbsp;</pre></td></tr></table></pre>
 
@@ -259,16 +235,16 @@ main:has(.login-card) {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-10-17T14:13:11.223Z
+                at 2026-10-19T01:55:48.924Z
             </div>
-        <script src="../prettify.js"></script>
+        <script src="../../prettify.js"></script>
         <script>
             window.onload = function () {
                 prettyPrint();
             };
         </script>
-        <script src="../sorter.js"></script>
-        <script src="../block-navigation.js"></script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
     </body>
 </html>
     

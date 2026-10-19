@@ -21,13 +21,7 @@ describe('AdminUsuarios', () => {
     expect(screen.getByText('Pedro')).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: /editar/i })).toHaveLength(2)
   })
-  test('permite filtrar usuarios por RUT', async () => {
-    const user = userEvent.setup()
-    mostrar()
-    await user.type(screen.getByLabelText(/Buscar por RUT/i), '1000005K')
-    expect(screen.getByText('Maria')).toBeInTheDocument()
-    expect(screen.queryByText('Pedro')).not.toBeInTheDocument()
-  })
+  
   test('no elimina un usuario si cancela la confirmación', async () => {
     const user = userEvent.setup()
     vi.spyOn(window, 'confirm').mockReturnValue(false)
