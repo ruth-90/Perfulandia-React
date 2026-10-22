@@ -11,12 +11,26 @@ export default function Navbar({
   const navigate = useNavigate()
 
   // ==========================================
+  // COMPROBAR SI EL ADMINISTRADOR TIENE SESIÓN
+  // ==========================================
+  const adminActivo =
+    sessionStorage.getItem('adminActivo') === 'true'
+
+  // ==========================================
   // CERRAR SESIÓN DEL CLIENTE
   // ==========================================
-  function cerrarSesion() {
+  function cerrarSesionCliente() {
     localStorage.removeItem('clienteActivo')
     onCerrarSesion?.()
     navigate('/')
+  }
+
+  // ==========================================
+  // CERRAR SESIÓN DEL ADMINISTRADOR
+  // ==========================================
+  function cerrarSesionAdmin() {
+    sessionStorage.removeItem('adminActivo')
+    navigate('/login', { replace: true })
   }
 
   // ==========================================
@@ -155,7 +169,63 @@ export default function Navbar({
               ========================================== */}
               <div className="d-flex align-items-center gap-3">
 
-                {usuarioActivo ? (
+                {adminActivo ? (
+
+                  /* ADMINISTRADOR CON SESIÓN INICIADA */
+                  <div className="dropdown">
+
+                    <button
+                      className="btn btn-outline-perfulandia dropdown-toggle"
+                      type="button"
+                      data-bs-toggle="dropdown"
+                      aria-expanded="false"
+                    >
+                      <i className="bi bi-person-gear me-2"></i>
+                      Administrador
+                    </button>
+
+                    <ul className="dropdown-menu dropdown-menu-end">
+
+                      <li>
+                        <span className="dropdown-item-text small text-muted">
+                          Sesión administrativa
+                        </span>
+                      </li>
+
+                      <li>
+                        <hr className="dropdown-divider" />
+                      </li>
+
+                      <li>
+                        <NavLink
+                          to="/admin"
+                          className="dropdown-item"
+                        >
+                          <i className="bi bi-speedometer2 me-2"></i>
+                          Volver al panel administrativo
+                        </NavLink>
+                      </li>
+
+                      <li>
+                        <hr className="dropdown-divider" />
+                      </li>
+
+                      <li>
+                        <button
+                          type="button"
+                          className="dropdown-item text-danger"
+                          onClick={cerrarSesionAdmin}
+                        >
+                          <i className="bi bi-box-arrow-right me-2"></i>
+                          Cerrar sesión
+                        </button>
+                      </li>
+
+                    </ul>
+
+                  </div>
+
+                ) : usuarioActivo ? (
 
                   /* CLIENTE CON SESIÓN INICIADA */
                   <div className="dropdown">
@@ -186,7 +256,7 @@ export default function Navbar({
                         <button
                           type="button"
                           className="dropdown-item text-danger"
-                          onClick={cerrarSesion}
+                          onClick={cerrarSesionCliente}
                         >
                           <i className="bi bi-box-arrow-right me-2"></i>
                           Cerrar sesión

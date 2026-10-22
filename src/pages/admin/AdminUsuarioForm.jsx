@@ -1,49 +1,16 @@
-
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import AdminSidebar from '../../components/AdminSidebar.jsx'
 
 // REGIONES Y COMUNAS
 const regionesComunas = {
-  'Región Metropolitana': [
-    'Santiago',
-    'Providencia',
-    'Las Condes',
-    'Ñuñoa',
-    'Maipú',
-    'Puente Alto'
-  ],
-  Valparaíso: [
-    'Valparaíso',
-    'Viña del Mar',
-    'Quilpué',
-    'Villa Alemana',
-    'Quillota'
-  ],
-  Biobío: [
-    'Concepción',
-    'Talcahuano',
-    'Chiguayante',
-    'San Pedro de la Paz',
-    'Los Ángeles'
-  ],
-  'La Araucanía': [
-    'Temuco',
-    'Padre Las Casas',
-    'Villarrica',
-    'Pucón',
-    'Angol'
-  ],
-  'Los Lagos': [
-    'Puerto Montt',
-    'Puerto Varas',
-    'Osorno',
-    'Castro',
-    'Ancud'
-  ]
+  'Región Metropolitana': ['Santiago', 'Providencia', 'Las Condes', 'Ñuñoa', 'Maipú', 'Puente Alto'],
+  Valparaíso: ['Valparaíso', 'Viña del Mar', 'Quilpué', 'Villa Alemana', 'Quillota'],
+  Biobío: ['Concepción', 'Talcahuano', 'Chiguayante', 'San Pedro de la Paz', 'Los Ángeles'],
+  'La Araucanía': ['Temuco', 'Padre Las Casas', 'Villarrica', 'Pucón', 'Angol'],
+  'Los Lagos': ['Puerto Montt', 'Puerto Varas', 'Osorno', 'Castro', 'Ancud']
 }
 
-// DATOS INICIALES DEL FORMULARIO
 const datosIniciales = {
   rut: '',
   nombre: '',
@@ -56,33 +23,23 @@ const datosIniciales = {
   direccion: ''
 }
 
-// OBTENER USUARIOS GUARDADOS EN LOCALSTORAGE
 function obtenerUsuarios() {
   try {
-    const guardados = JSON.parse(
-      localStorage.getItem('usuarios') || '[]'
-    )
-
+    const guardados = JSON.parse(localStorage.getItem('usuarios') || '[]')
     return Array.isArray(guardados) ? guardados : []
-
   } catch {
     return []
   }
 }
 
-// CALCULAR LA EDAD DEL USUARIO
 function calcularEdad(fechaNacimiento) {
   const [anio, mes, dia] = fechaNacimiento.split('-').map(Number)
-
   const hoy = new Date()
   let edad = hoy.getFullYear() - anio
 
   if (
     hoy.getMonth() + 1 < mes ||
-    (
-      hoy.getMonth() + 1 === mes &&
-      hoy.getDate() < dia
-    )
+    (hoy.getMonth() + 1 === mes && hoy.getDate() < dia)
   ) {
     edad--
   }
@@ -90,59 +47,45 @@ function calcularEdad(fechaNacimiento) {
   return edad
 }
 
-// FORMATEAR FECHA PARA EL CALENDARIO
 function formatearFecha(fecha) {
   const anio = fecha.getFullYear()
   const mes = String(fecha.getMonth() + 1).padStart(2, '0')
   const dia = String(fecha.getDate()).padStart(2, '0')
-
   return `${anio}-${mes}-${dia}`
 }
 
-// COMPONENTE CREAR Y EDITAR USUARIO
 export default function AdminUsuarioForm() {
-
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
-  // FECHA MÁXIMA PERMITIDA: 18 AÑOS CUMPLIDOS
   const hoy = new Date()
-
   const fechaLimite = new Date(
     hoy.getFullYear() - 18,
     hoy.getMonth(),
     hoy.getDate()
   )
-
   const fechaMaxima = formatearFecha(fechaLimite)
 
-  // IDENTIFICAR SI ESTAMOS EDITANDO
   const rutEditar = searchParams.get('rut')
   const esEdicion = Boolean(rutEditar)
 
-  // ESTADO DEL FORMULARIO
   const [datos, setDatos] = useState(() => {
-
     if (esEdicion) {
       const usuarioEncontrado = obtenerUsuarios().find(
         usuario => usuario.rut === rutEditar
       )
 
       if (usuarioEncontrado) {
-        return {
-          ...datosIniciales,
-          ...usuarioEncontrado
-        }
+        return { ...datosIniciales, ...usuarioEncontrado }
       }
     }
 
     return { ...datosIniciales }
   })
 
-  // MENSAJE DE ERROR
   const [mensaje, setMensaje] = useState('')
+  const [errores, setErrores] = useState({})
 
-  // ACTUALIZAR CAMPOS DEL FORMULARIO
   function manejarCambio(evento) {
     const { name, value } = evento.target
 
@@ -152,10 +95,17 @@ export default function AdminUsuarioForm() {
       ...(name === 'region' ? { comuna: '' } : {})
     }))
 
+    // Quitar el borde rojo del campo mientras se corrige.
+    setErrores(anteriores => {
+      const nuevos = { ...anteriores }
+      delete nuevos[name]
+      if (name === 'region') delete nuevos.comuna
+      return nuevos
+    })
+
     setMensaje('')
   }
 
-  // GUARDAR USUARIO
   function manejarEnvio(evento) {
     evento.preventDefault()
 
@@ -165,150 +115,131 @@ export default function AdminUsuarioForm() {
     const correo = datos.correo.trim().toLowerCase()
     const direccion = datos.direccion.trim()
 
-    // VALIDAR CAMPOS OBLIGATORIOS
-    if (
-      !rut ||
-      !nombre ||
-      !apellidos ||
-      !datos.fechaNacimiento ||
-      !correo ||
-      !datos.region ||
-      !datos.comuna ||
-      !direccion
-    ) {
+    // Mostrar todos los campos obligatorios que están vacíos.
+    const erroresObligatorios = {}
+    const camposObligatorios = {
+      rut: 'Debes ingresar el RUT.',
+      nombre: 'Debes ingresar el nombre.',
+      apellidos: 'Debes ingresar los apellidos.',
+      fechaNacimiento: 'Debes ingresar la fecha de nacimiento.',
+      correo: 'Debes ingresar un correo electrónico.',
+      region: 'Debes seleccionar una región.',
+      comuna: 'Debes seleccionar una comuna.',
+      direccion: 'Debes ingresar la dirección.'
+    }
+
+    Object.entries(camposObligatorios).forEach(([campo, texto]) => {
+      if (!String(datos[campo] ?? '').trim()) {
+        erroresObligatorios[campo] = texto
+      }
+    })
+
+    if (Object.keys(erroresObligatorios).length > 0) {
+      setErrores(erroresObligatorios)
       setMensaje('Debes completar todos los campos.')
       return
     }
 
-    // VALIDAR LONGITUD DEL RUT
+    // Mantener los mismos mensajes y validaciones que tenía el formulario.
+    function mostrarError(campo, texto) {
+      setErrores({ [campo]: texto })
+      setMensaje(texto)
+    }
+
     if (rut.length < 7 || rut.length > 9) {
-      setMensaje('El RUT debe tener entre 7 y 9 caracteres.')
+      mostrarError('rut', 'El RUT debe tener entre 7 y 9 caracteres.')
       return
     }
 
-    // VALIDAR FORMATO DEL RUT
     if (!/^[0-9]+[0-9K]$/.test(rut)) {
-      setMensaje('Ingresa el RUT sin puntos ni guion.')
+      mostrarError('rut', 'Ingresa el RUT sin puntos ni guion.')
       return
     }
 
-    // VALIDAR NOMBRE Y APELLIDOS
     if (nombre.length > 50 || apellidos.length > 100) {
-      setMensaje('Revisa la longitud del nombre y apellidos.')
+      const campo = nombre.length > 50 ? 'nombre' : 'apellidos'
+      mostrarError(campo, 'Revisa la longitud del nombre y apellidos.')
       return
     }
 
-    // VALIDAR FECHA DE NACIMIENTO
-    const [anio, mes, dia] = datos.fechaNacimiento
-      .split('-')
-      .map(Number)
-
+    const [anio, mes, dia] = datos.fechaNacimiento.split('-').map(Number)
     const fecha = new Date(anio, mes - 1, dia)
-    const hoy = new Date()
+    const hoyValidacion = new Date()
+    hoyValidacion.setHours(0, 0, 0, 0)
 
-    hoy.setHours(0, 0, 0, 0)
-
-    // COMPROBAR QUE LA FECHA EXISTA
     if (
-      !anio ||
-      !mes ||
-      !dia ||
+      !anio || !mes || !dia ||
       fecha.getFullYear() !== anio ||
       fecha.getMonth() !== mes - 1 ||
       fecha.getDate() !== dia
     ) {
-      setMensaje('Ingresa una fecha de nacimiento válida.')
+      mostrarError('fechaNacimiento', 'Ingresa una fecha de nacimiento válida.')
       return
     }
 
-    // NO PERMITIR FECHAS FUTURAS
-    if (fecha > hoy) {
-      setMensaje('La fecha de nacimiento no puede ser futura.')
+    if (fecha > hoyValidacion) {
+      mostrarError('fechaNacimiento', 'La fecha de nacimiento no puede ser futura.')
       return
     }
 
-    // NO PERMITIR MENORES DE 18 AÑOS
     if (calcularEdad(datos.fechaNacimiento) < 18) {
-      setMensaje('El usuario debe tener 18 años o más.')
+      mostrarError('fechaNacimiento', 'El usuario debe tener 18 años o más.')
       return
     }
 
-    // VALIDAR FORMATO DEL CORREO
     const formatoCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-    if (
-      !formatoCorreo.test(correo) ||
-      correo.length > 100
-    ) {
-      setMensaje('Ingresa un correo electrónico válido.')
+    if (!formatoCorreo.test(correo) || correo.length > 100) {
+      mostrarError('correo', 'Ingresa un correo electrónico válido.')
       return
     }
 
-    // DOMINIOS PERMITIDOS
     const dominiosPermitidos = [
       '@duoc.cl',
       '@profesor.duoc.cl',
       '@gmail.com'
     ]
 
-    if (!dominiosPermitidos.some(
-      dominio => correo.endsWith(dominio)
-    )) {
-      setMensaje('El dominio del correo no está permitido.')
+    if (!dominiosPermitidos.some(dominio => correo.endsWith(dominio))) {
+      mostrarError('correo', 'El dominio del correo no está permitido.')
       return
     }
 
-    // VALIDAR TIPO DE USUARIO
-    if (
-      datos.tipoUsuario !== 'Administrador' &&
-      datos.tipoUsuario !== 'Cliente'
-    ) {
-      setMensaje('Selecciona un tipo de usuario válido.')
+    if (datos.tipoUsuario !== 'Administrador' && datos.tipoUsuario !== 'Cliente') {
+      mostrarError('tipoUsuario', 'Selecciona un tipo de usuario válido.')
       return
     }
 
-    // VALIDAR REGIÓN Y COMUNA
-    if (
-      !regionesComunas[datos.region]?.includes(datos.comuna)
-    ) {
-      setMensaje('Selecciona una región y comuna válidas.')
+    if (!regionesComunas[datos.region]?.includes(datos.comuna)) {
+      mostrarError('comuna', 'Selecciona una región y comuna válidas.')
       return
     }
 
-    // VALIDAR DIRECCIÓN
     if (direccion.length > 300) {
-      setMensaje('La dirección no puede superar los 300 caracteres.')
+      mostrarError('direccion', 'La dirección no puede superar los 300 caracteres.')
       return
     }
 
-    // OBTENER USUARIOS EXISTENTES
     const usuarios = obtenerUsuarios()
 
-    // EVITAR RUT DUPLICADO
     const rutRepetido = usuarios.some(
-      usuario =>
-        usuario.rut === rut &&
-        usuario.rut !== rutEditar
+      usuario => usuario.rut === rut && usuario.rut !== rutEditar
     )
 
     if (rutRepetido) {
-      setMensaje('Este RUT ya está registrado.')
+      mostrarError('rut', 'Este RUT ya está registrado.')
       return
     }
 
-    // EVITAR CORREO DUPLICADO
     const correoRepetido = usuarios.some(
-      usuario =>
-        usuario.correo?.toLowerCase() === correo &&
-        usuario.rut !== rutEditar
+      usuario => usuario.correo?.toLowerCase() === correo && usuario.rut !== rutEditar
     )
 
     if (correoRepetido) {
-      setMensaje('Este correo ya está registrado.')
+      mostrarError('correo', 'Este correo ya está registrado.')
       return
     }
 
-    // DATOS DEL USUARIO
     const usuarioActualizado = {
       rut,
       nombre,
@@ -322,67 +253,54 @@ export default function AdminUsuarioForm() {
     }
 
     if (esEdicion) {
-
-      // COMPROBAR QUE EXISTA EL USUARIO
-      const usuarioExistente = usuarios.find(
-        usuario => usuario.rut === rutEditar
-      )
+      const usuarioExistente = usuarios.find(usuario => usuario.rut === rutEditar)
 
       if (!usuarioExistente) {
         setMensaje('No se encontró el usuario.')
+        setErrores({})
         return
       }
 
-      // ACTUALIZAR USUARIO
-      const usuariosActualizados = usuarios.map(
-        usuario =>
-          usuario.rut === rutEditar
-            ? { ...usuario, ...usuarioActualizado }
-            : usuario
+      const usuariosActualizados = usuarios.map(usuario =>
+        usuario.rut === rutEditar
+          ? { ...usuario, ...usuarioActualizado }
+          : usuario
       )
 
-      localStorage.setItem(
-        'usuarios',
-        JSON.stringify(usuariosActualizados)
-      )
-
+      localStorage.setItem('usuarios', JSON.stringify(usuariosActualizados))
     } else {
-
-      // CREAR USUARIO
       usuarios.push(usuarioActualizado)
-
-      localStorage.setItem(
-        'usuarios',
-        JSON.stringify(usuarios)
-      )
+      localStorage.setItem('usuarios', JSON.stringify(usuarios))
     }
 
-    // REGRESAR A LA TABLA DE USUARIOS
+    setErrores({})
     navigate('/admin/usuarios')
+  }
+
+  // Clases Bootstrap para identificar los campos incorrectos.
+  function claseCampo(nombre, tipo = 'input') {
+    const claseBase = tipo === 'select' ? 'form-select' : 'form-control'
+    return `${claseBase}${errores[nombre] ? ' is-invalid' : ''}`
+  }
+
+  function mensajeCampo(nombre) {
+    return errores[nombre]
+      ? <div className="invalid-feedback d-block">{errores[nombre]}</div>
+      : null
   }
 
   return (
     <div className="admin-body">
       <div className="admin-layout">
-
-        {/* MENÚ LATERAL */}
         <AdminSidebar />
 
-        {/* CONTENIDO PRINCIPAL */}
         <main className="admin-main">
-
-          {/* ENCABEZADO */}
           <section className="admin-top mb-4">
-
             <div>
-              <p className="text-secondary mb-1">
-                Administración
-              </p>
-
+              <p className="text-secondary mb-1">Administración</p>
               <h1 className="fw-bold mb-1">
                 {esEdicion ? 'Editar usuario' : 'Crear usuario'}
               </h1>
-
               <p className="text-secondary mb-0">
                 {esEdicion
                   ? 'Modifica los datos del usuario seleccionado.'
@@ -390,33 +308,20 @@ export default function AdminUsuarioForm() {
               </p>
             </div>
 
-            {/* IDENTIDAD DEL ADMINISTRADOR */}
             <div className="admin-identidad">
               <div className="admin-avatar">
                 <i className="bi bi-person-gear"></i>
               </div>
-
               <div>
-                <p className="mb-0 fw-semibold">
-                  Administrador
-                </p>
-
-                <small className="text-secondary">
-                  Sesión administrativa
-                </small>
+                <p className="mb-0 fw-semibold">Administrador</p>
+                <small className="text-secondary">Sesión administrativa</small>
               </div>
             </div>
-
           </section>
 
-          {/* FORMULARIO */}
           <section className="admin-panel p-4">
+            <h2 className="h5 fw-bold mb-4">Datos del usuario</h2>
 
-            <h2 className="h5 fw-bold mb-4">
-              Datos del usuario
-            </h2>
-
-            {/* MENSAJE DE ERROR */}
             {mensaje && (
               <div className="alert alert-danger" role="alert">
                 {mensaje}
@@ -424,215 +329,165 @@ export default function AdminUsuarioForm() {
             )}
 
             <form onSubmit={manejarEnvio} noValidate>
-
               <div className="row g-3">
-
-                {/* RUT */}
                 <div className="col-md-6">
-                  <label htmlFor="rut" className="form-label">
-                    RUT
-                  </label>
-
+                  <label htmlFor="rut" className="form-label">RUT</label>
                   <input
                     type="text"
                     id="rut"
                     name="rut"
-                    className="form-control"
+                    className={claseCampo('rut')}
                     placeholder="1000005K"
                     value={datos.rut}
                     onChange={manejarCambio}
                     maxLength={9}
+                    aria-invalid={Boolean(errores.rut)}
                     required
                   />
+                  {mensajeCampo('rut')}
                 </div>
 
-                {/* TIPO DE USUARIO */}
                 <div className="col-md-6">
-                  <label htmlFor="tipoUsuario" className="form-label">
-                    Tipo de usuario
-                  </label>
-
+                  <label htmlFor="tipoUsuario" className="form-label">Tipo de usuario</label>
                   <select
                     id="tipoUsuario"
                     name="tipoUsuario"
-                    className="form-select"
+                    className={claseCampo('tipoUsuario', 'select')}
                     value={datos.tipoUsuario}
                     onChange={manejarCambio}
+                    aria-invalid={Boolean(errores.tipoUsuario)}
                   >
-                    <option value="Cliente">
-                      Cliente
-                    </option>
-
-                    <option value="Administrador">
-                      Administrador
-                    </option>
+                    <option value="Cliente">Cliente</option>
+                    <option value="Administrador">Administrador</option>
                   </select>
+                  {mensajeCampo('tipoUsuario')}
                 </div>
 
-                {/* NOMBRE */}
                 <div className="col-md-6">
-                  <label htmlFor="nombre" className="form-label">
-                    Nombre
-                  </label>
-
+                  <label htmlFor="nombre" className="form-label">Nombre</label>
                   <input
                     type="text"
                     id="nombre"
                     name="nombre"
-                    className="form-control"
+                    className={claseCampo('nombre')}
                     value={datos.nombre}
                     onChange={manejarCambio}
                     maxLength={50}
+                    aria-invalid={Boolean(errores.nombre)}
                     required
                   />
+                  {mensajeCampo('nombre')}
                 </div>
 
-                {/* APELLIDOS */}
                 <div className="col-md-6">
-                  <label htmlFor="apellidos" className="form-label">
-                    Apellidos
-                  </label>
-
+                  <label htmlFor="apellidos" className="form-label">Apellidos</label>
                   <input
                     type="text"
                     id="apellidos"
                     name="apellidos"
-                    className="form-control"
+                    className={claseCampo('apellidos')}
                     value={datos.apellidos}
                     onChange={manejarCambio}
                     maxLength={100}
+                    aria-invalid={Boolean(errores.apellidos)}
                     required
                   />
+                  {mensajeCampo('apellidos')}
                 </div>
 
-                {/* FECHA DE NACIMIENTO */}
                 <div className="col-md-6">
-                  <label
-                    htmlFor="fechaNacimiento"
-                    className="form-label"
-                  >
+                  <label htmlFor="fechaNacimiento" className="form-label">
                     Fecha de nacimiento
                   </label>
-
                   <input
                     type="date"
                     id="fechaNacimiento"
                     name="fechaNacimiento"
-                    className="form-control"
+                    className={claseCampo('fechaNacimiento')}
                     value={datos.fechaNacimiento}
                     max={fechaMaxima}
                     onChange={manejarCambio}
+                    aria-invalid={Boolean(errores.fechaNacimiento)}
                     required
                   />
-
-                  <div className="form-text">
-                    El usuario debe tener 18 años o más.
-                  </div>
+                  {mensajeCampo('fechaNacimiento')}
+                  <div className="form-text">El usuario debe tener 18 años o más.</div>
                 </div>
 
-                {/* CORREO ELECTRÓNICO */}
                 <div className="col-md-6">
-                  <label htmlFor="correo" className="form-label">
-                    Correo electrónico
-                  </label>
-
+                  <label htmlFor="correo" className="form-label">Correo electrónico</label>
                   <input
                     type="email"
                     id="correo"
                     name="correo"
-                    className="form-control"
+                    className={claseCampo('correo')}
                     value={datos.correo}
                     onChange={manejarCambio}
                     maxLength={100}
+                    aria-invalid={Boolean(errores.correo)}
                     required
                   />
+                  {mensajeCampo('correo')}
                 </div>
 
-                {/* REGIÓN */}
                 <div className="col-md-6">
-                  <label htmlFor="region" className="form-label">
-                    Región
-                  </label>
-
+                  <label htmlFor="region" className="form-label">Región</label>
                   <select
                     id="region"
                     name="region"
-                    className="form-select"
+                    className={claseCampo('region', 'select')}
                     value={datos.region}
                     onChange={manejarCambio}
+                    aria-invalid={Boolean(errores.region)}
                   >
-                    <option value="">
-                      Selecciona una región
-                    </option>
-
+                    <option value="">Selecciona una región</option>
                     {Object.keys(regionesComunas).map(region => (
-                      <option key={region} value={region}>
-                        {region}
-                      </option>
+                      <option key={region} value={region}>{region}</option>
                     ))}
                   </select>
+                  {mensajeCampo('region')}
                 </div>
 
-                {/* COMUNA */}
                 <div className="col-md-6">
-                  <label htmlFor="comuna" className="form-label">
-                    Comuna
-                  </label>
-
+                  <label htmlFor="comuna" className="form-label">Comuna</label>
                   <select
                     id="comuna"
                     name="comuna"
-                    className="form-select"
+                    className={claseCampo('comuna', 'select')}
                     value={datos.comuna}
                     onChange={manejarCambio}
                     disabled={!datos.region}
+                    aria-invalid={Boolean(errores.comuna)}
                   >
-                    <option value="">
-                      Selecciona una comuna
-                    </option>
-
-                    {(regionesComunas[datos.region] || []).map(
-                      comuna => (
-                        <option key={comuna} value={comuna}>
-                          {comuna}
-                        </option>
-                      )
-                    )}
+                    <option value="">Selecciona una comuna</option>
+                    {(regionesComunas[datos.region] || []).map(comuna => (
+                      <option key={comuna} value={comuna}>{comuna}</option>
+                    ))}
                   </select>
+                  {mensajeCampo('comuna')}
                 </div>
 
-                {/* DIRECCIÓN */}
                 <div className="col-12">
-                  <label htmlFor="direccion" className="form-label">
-                    Dirección
-                  </label>
-
+                  <label htmlFor="direccion" className="form-label">Dirección</label>
                   <input
                     type="text"
                     id="direccion"
                     name="direccion"
-                    className="form-control"
+                    className={claseCampo('direccion')}
                     value={datos.direccion}
                     onChange={manejarCambio}
                     maxLength={300}
+                    aria-invalid={Boolean(errores.direccion)}
                     required
                   />
+                  {mensajeCampo('direccion')}
                 </div>
-
               </div>
 
-              {/* BOTONES */}
               <div className="d-flex gap-2 mt-4">
-
-                <button
-                  type="submit"
-                  className="btn btn-perfulandia"
-                >
+                <button type="submit" className="btn btn-perfulandia">
                   <i className="bi bi-check-circle me-2"></i>
-
-                  {esEdicion
-                    ? 'Guardar cambios'
-                    : 'Crear usuario'}
+                  {esEdicion ? 'Guardar cambios' : 'Crear usuario'}
                 </button>
 
                 <button
@@ -642,20 +497,13 @@ export default function AdminUsuarioForm() {
                 >
                   Cancelar
                 </button>
-
               </div>
-
             </form>
-
           </section>
 
-          {/* PIE DE PÁGINA */}
           <footer className="admin-footer text-center mt-4">
-            <small>
-              © 2026 Perfulandia - Panel Administrativo
-            </small>
+            <small>© 2026 Perfulandia - Panel Administrativo</small>
           </footer>
-
         </main>
       </div>
     </div>
