@@ -1,12 +1,17 @@
 
 import { useState, useEffect } from 'react'
 
+// CONEXIÓN CON EL MICROSERVICIO DE CONTACTO
+import { enviarMensajeContacto } from '../services/contactoApi.js'
+
+
 // ==========================================
 // VALIDACIONES DEL FORMULARIO
 // ==========================================
 
 // VALIDAR NOMBRE
 function validarNombre(valor) {
+
     const nombre = valor.trim()
 
     if (nombre === '') {
@@ -20,8 +25,10 @@ function validarNombre(valor) {
     return ''
 }
 
+
 // VALIDAR CORREO
 function validarCorreo(valor) {
+
     const correo = valor.trim().toLowerCase()
 
     // El correo es opcional
@@ -58,8 +65,10 @@ function validarCorreo(valor) {
     return ''
 }
 
+
 // VALIDAR COMENTARIO
 function validarComentario(valor) {
+
     const comentario = valor.trim()
 
     if (comentario === '') {
@@ -72,6 +81,7 @@ function validarComentario(valor) {
 
     return ''
 }
+
 
 // ==========================================
 // COMPONENTE CONTACTO
@@ -93,17 +103,24 @@ export default function Contacto() {
         comentario: false
     })
 
-    // CONTROLAR VALIDACIÓN Y MENSAJE
+    // CONTROLAR VALIDACIÓN Y MENSAJES
     const [intentoEnvio, setIntentoEnvio] = useState(false)
     const [mensajeExito, setMensajeExito] = useState(false)
+    const [mensajeError, setMensajeError] = useState('')
+    const [enviando, setEnviando] = useState(false)
 
     // VALIDACIONES
     const errorNombre = validarNombre(datos.nombre)
     const errorCorreo = validarCorreo(datos.correo)
     const errorComentario = validarComentario(datos.comentario)
 
+
+    // ==========================================
     // ACTUALIZAR DATOS AL ESCRIBIR
+    // ==========================================
+
     function manejarCambio(evento) {
+
         const { name, value } = evento.target
 
         setDatos((datosActuales) => ({
@@ -116,10 +133,16 @@ export default function Contacto() {
             [name]: true
         }))
 
+        // Ocultar mensajes anteriores al modificar datos
         setMensajeExito(false)
+        setMensajeError('')
     }
 
+
+    // ==========================================
     // ASIGNAR ESTILOS SEGÚN LA VALIDACIÓN
+    // ==========================================
+
     function claseCampo(campo, error) {
 
         if (!tocados[campo] && !intentoEnvio) {
@@ -138,27 +161,48 @@ export default function Contacto() {
         return 'form-control is-valid'
     }
 
-    // PROCESAR FORMULARIO
-    function manejarEnvio(evento) {
+
+    // ==========================================
+    // ENVIAR FORMULARIO A SPRING BOOT
+    // ==========================================
+
+    async function manejarEnvio(evento) {
+
         evento.preventDefault()
+
+        // Evitar envíos duplicados
+        if (enviando) {
+            return
+        }
 
         setIntentoEnvio(true)
         setMensajeExito(false)
+        setMensajeError('')
 
         const nombreValido = !errorNombre
         const correoValido = !errorCorreo
         const comentarioValido = !errorComentario
 
+        // Si hay errores, no consultar el backend
         if (
-            nombreValido &&
-            correoValido &&
-            comentarioValido
+            !nombreValido ||
+            !correoValido ||
+            !comentarioValido
         ) {
+            return
+        }
 
-            // Confirmación de validación local
+        setEnviando(true)
+
+        try {
+
+            // GUARDAR EL MENSAJE EN H2 MEDIANTE AXIOS
+            await enviarMensajeContacto(datos)
+
+            // CONFIRMACIÓN SOLO DESPUÉS DEL POST EXITOSO
             setMensajeExito(true)
 
-            // Limpiar formulario
+            // Limpiar el formulario
             setDatos({
                 nombre: '',
                 correo: '',
@@ -173,28 +217,52 @@ export default function Contacto() {
             })
 
             setIntentoEnvio(false)
+
+        } catch (error) {
+
+            console.error(
+                'Error al enviar el mensaje de contacto:',
+                error
+            )
+
+            // Conservar los datos para intentar nuevamente
+            setMensajeError(
+                error.response?.status === 400
+                    ? 'El servidor rechazó los datos del formulario. Revisa la información ingresada.'
+                    : 'No fue posible enviar tu mensaje. Verifica la conexión e inténtalo nuevamente.'
+            )
+
+        } finally {
+
+            setEnviando(false)
+
         }
     }
 
-    // OCULTAR MENSAJE DESPUÉS DE 4 SEGUNDOS
+
+    // ==========================================
+    // OCULTAR MENSAJE DE ÉXITO DESPUÉS DE 4 SEGUNDOS
+    // ==========================================
+
     useEffect(() => {
 
         if (!mensajeExito) return
 
         const temporizador = setTimeout(() => {
             setMensajeExito(false)
-        }, 4000)
+        }, 10000)
 
         return () => clearTimeout(temporizador)
 
     }, [mensajeExito])
 
+
     return (
         <>
 
             {/* =====================================
-          ENCABEZADO
-      ===================================== */}
+                ENCABEZADO
+            ===================================== */}
 
             <section className="contacto-hero">
 
@@ -217,9 +285,10 @@ export default function Contacto() {
 
             </section>
 
+
             {/* =====================================
-          CONTENIDO
-      ===================================== */}
+                CONTENIDO
+            ===================================== */}
 
             <section className="contacto-contenido py-5">
 
@@ -268,11 +337,14 @@ export default function Contacto() {
                                     </div>
 
                                     <div>
+
                                         <h3>Horario</h3>
+
                                         <p>
                                             Lunes a viernes<br />
                                             09:00 a 18:00
                                         </p>
+
                                     </div>
 
                                 </div>
@@ -285,11 +357,14 @@ export default function Contacto() {
                                     </div>
 
                                     <div>
+
                                         <h3>Atención</h3>
+
                                         <p>
                                             Estamos disponibles para
                                             resolver tus consultas.
                                         </p>
+
                                     </div>
 
                                 </div>
@@ -298,9 +373,10 @@ export default function Contacto() {
 
                         </div>
 
+
                         {/* =====================================
-                FORMULARIO
-            ===================================== */}
+                            FORMULARIO
+                        ===================================== */}
 
                         <div className="col-lg-7">
 
@@ -309,6 +385,7 @@ export default function Contacto() {
                                 <h2 className="mb-4">
                                     Envíanos un mensaje
                                 </h2>
+
 
                                 {/* MENSAJE DE CONFIRMACIÓN */}
                                 {mensajeExito && (
@@ -320,11 +397,26 @@ export default function Contacto() {
                                     >
                                         <i className="bi bi-check-circle-fill"></i>
                                         {' '}
-                                        Formulario validado correctamente.
-                                        No se ha enviado a un servidor.
+                                        ¡Tu mensaje fue enviado y registrado correctamente!
                                     </div>
 
                                 )}
+
+
+                                {/* MENSAJE DE ERROR DEL BACKEND */}
+                                {mensajeError && (
+
+                                    <div
+                                        className="alert alert-danger"
+                                        role="alert"
+                                    >
+                                        <i className="bi bi-exclamation-triangle-fill"></i>
+                                        {' '}
+                                        {mensajeError}
+                                    </div>
+
+                                )}
+
 
                                 <form
                                     id="formContacto"
@@ -362,6 +454,7 @@ export default function Contacto() {
                                                 Boolean(errorNombre)
                                             }
                                             aria-describedby="errorNombre"
+                                            disabled={enviando}
                                         />
 
                                         <div
@@ -378,6 +471,7 @@ export default function Contacto() {
                                         </small>
 
                                     </div>
+
 
                                     {/* CORREO */}
                                     <div className="mb-4">
@@ -406,6 +500,7 @@ export default function Contacto() {
                                                 Boolean(errorCorreo)
                                             }
                                             aria-describedby="errorCorreo"
+                                            disabled={enviando}
                                         />
 
                                         <div
@@ -423,6 +518,7 @@ export default function Contacto() {
                                         </small>
 
                                     </div>
+
 
                                     {/* COMENTARIO */}
                                     <div className="mb-3">
@@ -453,6 +549,7 @@ export default function Contacto() {
                                                 Boolean(errorComentario)
                                             }
                                             aria-describedby="errorComentario"
+                                            disabled={enviando}
                                         />
 
                                         <div
@@ -463,6 +560,7 @@ export default function Contacto() {
                                                 ? errorComentario
                                                 : ''}
                                         </div>
+
 
                                         {/* CONTADOR */}
                                         <div className="d-flex justify-content-between mt-2">
@@ -486,13 +584,27 @@ export default function Contacto() {
 
                                     </div>
 
+
                                     {/* BOTÓN ENVIAR */}
                                     <button
                                         type="submit"
                                         className="btn btn-perfulandia btn-lg w-100 mt-3"
+                                        disabled={enviando}
                                     >
-                                        <i className="bi bi-send"></i>
-                                        {' '}Enviar mensaje
+                                        {enviando ? (
+                                            <>
+                                                <span
+                                                    className="spinner-border spinner-border-sm me-2"
+                                                    aria-hidden="true"
+                                                ></span>
+                                                Enviando mensaje...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <i className="bi bi-send"></i>
+                                                {' '}Enviar mensaje
+                                            </>
+                                        )}
                                     </button>
 
                                 </form>
