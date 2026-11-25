@@ -1,23 +1,85 @@
 
 import { useState, useEffect } from 'react'
-import { obtenerProductos } from '../services/productosStorage.js'
+
+// NUEVA FUENTE DE DATOS: SPRING BOOT + H2
+import { obtenerProductosApi } from '../services/productosApi.js'
+
 import ProductoCatalogoCard from '../components/ProductoCatalogoCard.jsx'
 
 export default function Productos({ onAgregarProducto }) {
-    // Lista de productos sincronizada con la base de datos local
+
+    // LISTA DE PRODUCTOS RECIBIDA DESDE SPRING BOOT
     const [listaProductos, setListaProductos] = useState([])
 
-    // ESTADOS DE REACT
+    // ESTADOS DEL BUSCADOR Y FILTROS
     const [busqueda, setBusqueda] = useState('')
     const [categoria, setCategoria] = useState('todos')
+
+    // MENSAJE AL AGREGAR PRODUCTOS AL CARRITO
     const [mensaje, setMensaje] = useState('')
 
+    // ESTADOS PARA CONTROLAR LA CONSULTA AL BACKEND
+    const [cargando, setCargando] = useState(true)
+    const [error, setError] = useState('')
+
+
+    // 1. OBTENER PRODUCTOS DESDE SPRING BOOT
     useEffect(() => {
-        setListaProductos(obtenerProductos())
+
+        let activo = true
+
+        async function cargarProductos() {
+
+            try {
+
+                // Iniciamos la carga y limpiamos errores anteriores.
+                setCargando(true)
+                setError('')
+
+                // Consultamos el endpoint GET mediante Axios.
+                const productos = await obtenerProductosApi()
+
+                // Actualizamos el estado con los datos de H2.
+                if (activo) {
+                    setListaProductos(productos)
+                }
+
+            } catch (errorConexion) {
+
+                console.error(
+                    'Error al obtener los productos:',
+                    errorConexion
+                )
+
+                // Mostramos un mensaje si el backend no responde.
+                if (activo) {
+                    setError(
+                        'No fue posible cargar los perfumes. Intenta nuevamente más tarde.'
+                    )
+                }
+
+            } finally {
+
+                // Finalizamos el estado de carga.
+                if (activo) {
+                    setCargando(false)
+                }
+            }
+        }
+
+        cargarProductos()
+
+        // Evita actualizar el componente si se desmonta.
+        return () => {
+            activo = false
+        }
+
     }, [])
 
-    // FILTRAR PRODUCTOS
+
+    // 2. FILTRAR PRODUCTOS POR NOMBRE Y CATEGORÍA
     const productosFiltrados = listaProductos.filter((producto) => {
+
         const coincideNombre = producto.nombre
             .toLowerCase()
             .includes(busqueda.toLowerCase().trim())
@@ -29,18 +91,27 @@ export default function Productos({ onAgregarProducto }) {
         return coincideNombre && coincideCategoria
     })
 
-    // AGREGAR AL CARRITO
+
+    // 3. AGREGAR PRODUCTOS AL CARRITO
     function agregarAlCarrito(producto) {
 
-        // Llamar a la función de App.jsx
-        // para actualizar el estado del carrito
+        // Impedimos agregar perfumes agotados.
+        if (Number(producto.stock) <= 0) {
+            setMensaje(
+                `${producto.nombre} no tiene stock disponible.`
+            )
+            return
+        }
+
+        // Llamamos a la función que recibimos desde App.jsx.
         onAgregarProducto(producto)
 
-        // Mostrar mensaje de confirmación
+        // Mostramos un mensaje de confirmación.
         setMensaje(
             `${producto.nombre} fue agregado al carrito.`
         )
     }
+
 
     return (
         <>
@@ -62,6 +133,7 @@ export default function Productos({ onAgregarProducto }) {
 
                 </div>
             </section>
+
 
             {/* CATÁLOGO */}
             <section className="catalogo-productos py-5">
@@ -94,6 +166,7 @@ export default function Productos({ onAgregarProducto }) {
 
                                     </div>
                                 </div>
+
 
                                 {/* FILTRO CATEGORÍA */}
                                 <div className="col-md-4">
@@ -129,43 +202,76 @@ export default function Productos({ onAgregarProducto }) {
                         </div>
                     </div>
 
-                    {/* PRODUCTOS */}
-                    {productosFiltrados.length > 0 ? (
 
-                        <div className="row g-4">
+                    {/* MENSAJE DE CARGA */}
+                    {cargando && (
+                        <div
+                            className="text-center py-5"
+                            role="status"
+                        >
+                            <div
+                                className="spinner-border"
+                                aria-hidden="true"
+                            ></div>
 
-                            {productosFiltrados.map((producto) => (
-
-                                <ProductoCatalogoCard
-                                    key={producto.id}
-                                    producto={producto}
-                                    onAgregar={agregarAlCarrito}
-                                />
-
-                            ))}
-
-                        </div>
-
-                    ) : (
-
-                        <div className="text-center py-5">
-
-                            <i className="bi bi-search icono-sin-productos"></i>
-
-                            <h2 className="mt-3">
-                                No encontramos productos
-                            </h2>
-
-                            <p>
-                                Intenta buscar otro perfume.
+                            <p className="mt-3">
+                                Cargando perfumes...
                             </p>
-
                         </div>
+                    )}
 
+
+                    {/* MENSAJE DE ERROR */}
+                    {!cargando && error && (
+                        <div
+                            className="alert alert-danger text-center"
+                            role="alert"
+                        >
+                            {error}
+                        </div>
+                    )}
+
+
+                    {/* LISTA DE PRODUCTOS */}
+                    {!cargando && !error && (
+
+                        productosFiltrados.length > 0 ? (
+
+                            <div className="row g-4">
+
+                                {productosFiltrados.map((producto) => (
+
+                                    <ProductoCatalogoCard
+                                        key={producto.id}
+                                        producto={producto}
+                                        onAgregar={agregarAlCarrito}
+                                    />
+
+                                ))}
+
+                            </div>
+
+                        ) : (
+
+                            <div className="text-center py-5">
+
+                                <i className="bi bi-search icono-sin-productos"></i>
+
+                                <h2 className="mt-3">
+                                    No encontramos productos
+                                </h2>
+
+                                <p>
+                                    Intenta buscar otro perfume.
+                                </p>
+
+                            </div>
+                        )
                     )}
 
                 </div>
             </section>
+
 
             {/* MENSAJE AL AGREGAR AL CARRITO */}
             {mensaje && (
@@ -173,7 +279,8 @@ export default function Productos({ onAgregarProducto }) {
                     className="alert alert-producto position-fixed top-0 start-50 translate-middle-x mt-4 shadow"
                     role="status"
                 >
-                    <i className="bi bi-check-circle-fill"></i>
+                    <i className="bi bi-info-circle-fill"></i>
+
                     {mensaje}
 
                     <button

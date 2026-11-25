@@ -1,6 +1,8 @@
+
 // =====================================================
 // PERFULANDIA - PRUEBAS UNITARIAS
 // COMPONENTE ADMIN DASHBOARD
+// CONECTADO CON SPRING BOOT Y H2
 // =====================================================
 
 import {
@@ -14,29 +16,40 @@ import {
 import {
   render,
   screen,
-  within
+  within,
+  waitFor
 } from '@testing-library/react'
 
 import { MemoryRouter } from 'react-router'
 
 import AdminDashboard from './AdminDashboard.jsx'
 
+// FUNCIÓN ACTUAL QUE UTILIZA EL DASHBOARD
 import {
-  obtenerEstadisticas,
-  obtenerProductos
-} from '../../services/productosStorage.js'
+  obtenerProductosApi
+} from '../../services/productosApi.js'
 
 
 // =====================================================
-// SIMULAR EL SERVICIO DE PRODUCTOS
+// SIMULAR LA CONSULTA A SPRING BOOT
+// =====================================================
+
+vi.mock('../../services/productosApi.js', () => ({
+
+  obtenerProductosApi: vi.fn()
+
+}))
+
+
+// =====================================================
+// SIMULAR SOLAMENTE EL FORMATO DE PRECIOS
 // =====================================================
 
 vi.mock('../../services/productosStorage.js', () => ({
-  obtenerEstadisticas: vi.fn(),
-  obtenerProductos: vi.fn(),
 
   formatearPrecio: (precio) =>
     `$${Number(precio).toLocaleString('es-CL')}`
+
 }))
 
 
@@ -45,6 +58,7 @@ vi.mock('../../services/productosStorage.js', () => ({
 // =====================================================
 
 const productosSimulados = [
+
   {
     id: 1,
     nombre: 'Brisa Floral',
@@ -54,6 +68,7 @@ const productosSimulados = [
     stock: 4,
     imagen: '/img/brisa.webp'
   },
+
   {
     id: 2,
     nombre: 'Bosque Intenso',
@@ -63,6 +78,7 @@ const productosSimulados = [
     stock: 0,
     imagen: '/img/bosque.webp'
   }
+
 ]
 
 
@@ -71,34 +87,35 @@ const productosSimulados = [
 // =====================================================
 
 function renderizarDashboard() {
+
   return render(
+
     <MemoryRouter>
+
       <AdminDashboard />
+
     </MemoryRouter>
+
   )
 }
 
 
 // =====================================================
-// GRUPO DE PRUEBAS UNITARIAS
+// PRUEBAS UNITARIAS
 // =====================================================
 
 describe('AdminDashboard - Perfulandia', () => {
 
+
   // PREPARACIÓN ANTES DE CADA PRUEBA
   beforeEach(() => {
 
+    // LIMPIAR LLAMADAS ANTERIORES
     vi.clearAllMocks()
 
-    vi.mocked(obtenerEstadisticas).mockReturnValue({
-      totalProductos: 2,
-      stockTotal: 4,
-      sinStock: 1
-    })
-
-    vi.mocked(obtenerProductos).mockReturnValue(
-      productosSimulados
-    )
+    // SIMULAR QUE SPRING BOOT DEVUELVE DOS PRODUCTOS
+    vi.mocked(obtenerProductosApi)
+      .mockResolvedValue(productosSimulados)
 
   })
 
@@ -107,169 +124,260 @@ describe('AdminDashboard - Perfulandia', () => {
   // PRUEBA 1: ESTADÍSTICAS DEL INVENTARIO
   // =================================================
 
-  test('muestra las estadísticas del inventario', () => {
+  test(
+    'muestra las estadísticas del inventario',
+    async () => {
 
-    // PREPARAR
-    renderizarDashboard()
+      // PREPARAR
+      renderizarDashboard()
 
-    // COMPROBAR EL TÍTULO
-    expect(
-      screen.getByRole('heading', {
-        name: 'Dashboard'
-      })
-    ).toBeInTheDocument()
+      // ESPERAR A QUE REACT CARGUE LOS PRODUCTOS
+      await screen.findByText('Brisa Floral')
 
-    // COMPROBAR LA CONSULTA
-    expect(
-      obtenerEstadisticas
-    ).toHaveBeenCalledTimes(1)
+      // COMPROBAR EL TÍTULO
+      expect(
+        screen.getByRole('heading', {
+          name: 'Dashboard'
+        })
+      ).toBeInTheDocument()
 
-    // OBTENER LAS TARJETAS
-    const registrados = screen
-      .getByText('Productos registrados')
-      .closest('.admin-stat')
+      // COMPROBAR QUE SE CONSULTÓ SPRING BOOT
+      expect(
+        obtenerProductosApi
+      ).toHaveBeenCalledTimes(1)
 
-    const stock = screen
-      .getByText('Stock total en bodega')
-      .closest('.admin-stat')
+      // OBTENER LAS TARJETAS
+      const registrados = screen
+        .getByText('Productos registrados')
+        .closest('.admin-stat')
 
-    const sinStock = screen
-      .getByText('Productos sin stock')
-      .closest('.admin-stat')
+      const stock = screen
+        .getByText('Stock total en bodega')
+        .closest('.admin-stat')
 
-    // COMPROBAR LOS RESULTADOS
-    expect(
-      within(registrados).getByText('2')
-    ).toBeInTheDocument()
+      const sinStock = screen
+        .getByText('Productos sin stock')
+        .closest('.admin-stat')
 
-    expect(
-      within(stock).getByText('4')
-    ).toBeInTheDocument()
+      // COMPROBAR LAS ESTADÍSTICAS
+      expect(
+        within(registrados).getByText('2')
+      ).toBeInTheDocument()
 
-    expect(
-      within(sinStock).getByText('1')
-    ).toBeInTheDocument()
+      expect(
+        within(stock).getByText('4')
+      ).toBeInTheDocument()
 
-  })
+      expect(
+        within(sinStock).getByText('1')
+      ).toBeInTheDocument()
+
+    }
+  )
 
 
   // =================================================
   // PRUEBA 2: MOSTRAR PRODUCTOS Y DISPONIBILIDAD
   // =================================================
 
-  test('muestra los últimos productos y su disponibilidad', () => {
+  test(
+    'muestra los últimos productos y su disponibilidad',
+    async () => {
 
-    // PREPARAR
-    renderizarDashboard()
+      // PREPARAR
+      renderizarDashboard()
 
-    // COMPROBAR CONSULTA
-    expect(
-      obtenerProductos
-    ).toHaveBeenCalledTimes(1)
+      // ESPERAR LA RESPUESTA SIMULADA DE LA API
+      await screen.findByText('Brisa Floral')
 
-    // COMPROBAR PRODUCTOS
-    expect(
-      screen.getByText('Brisa Floral')
-    ).toBeInTheDocument()
+      // COMPROBAR LA CONSULTA
+      expect(
+        obtenerProductosApi
+      ).toHaveBeenCalledTimes(1)
 
-    expect(
-      screen.getByText('Bosque Intenso')
-    ).toBeInTheDocument()
+      // COMPROBAR PRODUCTOS
+      expect(
+        screen.getByText('Brisa Floral')
+      ).toBeInTheDocument()
 
-    // COMPROBAR DISPONIBILIDAD
-    expect(
-      screen.getByText('Disponible')
-    ).toBeInTheDocument()
+      expect(
+        screen.getByText('Bosque Intenso')
+      ).toBeInTheDocument()
 
-    expect(
-      screen.getByText('Sin stock')
-    ).toBeInTheDocument()
+      // COMPROBAR DISPONIBILIDAD
+      expect(
+        screen.getByText('Disponible')
+      ).toBeInTheDocument()
 
-    // COMPROBAR PRECIO
-    expect(
-      screen.getByText('$29.990')
-    ).toBeInTheDocument()
+      // "SIN STOCK" TAMBIÉN APARECE EN LAS TARJETAS
+      // POR ESO BUSCAMOS SU ESTADO DENTRO DE LA TABLA
+      const tabla = screen.getByRole('table')
 
-  })
+      expect(
+        within(tabla).getByText('Sin stock')
+      ).toBeInTheDocument()
+
+      // COMPROBAR PRECIO
+      expect(
+        screen.getByText('$29.990')
+      ).toBeInTheDocument()
+
+    }
+  )
 
 
   // =================================================
   // PRUEBA 3: ACCESOS RÁPIDOS
   // =================================================
 
-  test('muestra los accesos rápidos del administrador', () => {
+  test(
+    'muestra los accesos rápidos del administrador',
+    async () => {
 
-    // PREPARAR
-    renderizarDashboard()
+      // PREPARAR
+      renderizarDashboard()
 
-    // COMPROBAR CREAR PRODUCTO
-    const enlacesCrear = screen.getAllByRole('link', {
-      name: 'Crear producto'
-    })
+      // ESPERAR LA CARGA PARA MOSTRAR LOS ACCESOS
+      await screen.findByText('Brisa Floral')
 
-    expect(
-      enlacesCrear.some(enlace =>
-        enlace.getAttribute('href') ===
-        '/admin/producto-form'
-      )
-    ).toBe(true)
+      // COMPROBAR CREAR PRODUCTO
+      const enlacesCrear = screen.getAllByRole('link', {
+        name: 'Crear producto'
+      })
 
-    // COMPROBAR VER USUARIOS
-    const enlacesUsuarios = screen.getAllByRole('link', {
-      name: 'Ver usuarios'
-    })
+      expect(
+        enlacesCrear.some(enlace =>
+          enlace.getAttribute('href') ===
+          '/admin/producto-form'
+        )
+      ).toBe(true)
 
-    expect(
-      enlacesUsuarios.some(enlace =>
-        enlace.getAttribute('href') ===
-        '/admin/usuarios'
-      )
-    ).toBe(true)
+      // COMPROBAR VER USUARIOS
+      const enlacesUsuarios = screen.getAllByRole('link', {
+        name: 'Ver usuarios'
+      })
 
-  })
+      expect(
+        enlacesUsuarios.some(enlace =>
+          enlace.getAttribute('href') ===
+          '/admin/usuarios'
+        )
+      ).toBe(true)
+
+    }
+  )
 
 
   // =================================================
   // PRUEBA 4: LÍMITE DE PRODUCTOS RECIENTES
   // =================================================
 
-  test('limita la tabla a cinco productos recientes', () => {
+  test(
+    'limita la tabla a cinco productos recientes',
+    async () => {
 
-    // PREPARAR 8 PRODUCTOS
-    const productos = Array.from(
-      { length: 8 },
-      (_, indice) => ({
-        id: indice + 1,
-        nombre: `Perfume ${indice + 1}`,
-        categoria: 'Unisex',
-        descripcion: 'Fragancia de prueba',
-        precio: 10000,
-        stock: 3,
-        imagen: '/img/prueba.webp'
-      })
-    )
+      // PREPARAR OCHO PRODUCTOS
+      const productos = Array.from(
+        { length: 8 },
+        (_, indice) => ({
 
-    vi.mocked(obtenerProductos).mockReturnValue(
-      productos
-    )
+          id: indice + 1,
 
-    // ACTUAR
-    renderizarDashboard()
+          nombre: `Perfume ${indice + 1}`,
 
-    // COMPROBAR
-    // 1 fila de encabezado + 5 productos
-    expect(
-      screen.getAllByRole('row')
-    ).toHaveLength(6)
+          categoria: 'Unisex',
 
-    expect(
-      screen.getByText('Perfume 5')
-    ).toBeInTheDocument()
+          descripcion: 'Fragancia de prueba',
 
-    expect(
-      screen.queryByText('Perfume 6')
-    ).not.toBeInTheDocument()
+          precio: 10000,
 
-  })
+          stock: 3,
+
+          imagen: '/img/prueba.webp'
+
+        })
+      )
+
+      // SIMULAR UNA RESPUESTA DE OCHO PERFUMES
+      vi.mocked(obtenerProductosApi)
+        .mockResolvedValue(productos)
+
+      // MOSTRAR EL DASHBOARD
+      renderizarDashboard()
+
+      // ESPERAR A QUE CARGUE EL PERFUME CON ID MÁS ALTO
+      await screen.findByText('Perfume 8')
+
+      // 1 FILA DE ENCABEZADO + 5 FILAS DE PRODUCTOS
+      const tabla = screen.getByRole('table')
+
+      expect(
+        within(tabla).getAllByRole('row')
+      ).toHaveLength(6)
+
+      // DEBEN MOSTRARSE LOS CINCO ID MÁS ALTOS
+      for (const id of [8, 7, 6, 5, 4]) {
+
+        expect(
+          within(tabla).getByText(`Perfume ${id}`)
+        ).toBeInTheDocument()
+
+      }
+
+      // LOS TRES PRODUCTOS MÁS ANTIGUOS NO APARECEN
+      for (const id of [1, 2, 3]) {
+
+        expect(
+          within(tabla).queryByText(`Perfume ${id}`)
+        ).not.toBeInTheDocument()
+
+      }
+
+    }
+  )
+
+
+  // =================================================
+  // PRUEBA 5: ERROR DE CONEXIÓN
+  // =================================================
+
+  test(
+    'muestra un mensaje si Spring Boot no responde',
+    async () => {
+
+      // SIMULAR QUE LA CONSULTA FALLA
+      vi.mocked(obtenerProductosApi)
+        .mockRejectedValue(
+          new Error('Servidor no disponible')
+        )
+
+      // EVITAR QUE EL ERROR ESPERADO ENSUCIE LA CONSOLA
+      const consola = vi.spyOn(console, 'error')
+        .mockImplementation(() => {})
+
+      try {
+
+        renderizarDashboard()
+
+        // COMPROBAR MENSAJE DE ERROR
+        expect(
+          await screen.findByRole('alert')
+        ).toHaveTextContent(
+          'No fue posible cargar las estadísticas'
+        )
+
+        // COMPROBAR QUE NO APARECEN DATOS INVENTADOS
+        expect(
+          screen.queryByText('Brisa Floral')
+        ).not.toBeInTheDocument()
+
+      } finally {
+
+        consola.mockRestore()
+
+      }
+
+    }
+  )
 
 })

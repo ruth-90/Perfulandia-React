@@ -24,11 +24,14 @@ import AdminProductoForm from './pages/admin/AdminProductoForm.jsx'
 import AdminUsuarios from './pages/admin/AdminUsuarios.jsx'
 import AdminUsuarioForm from './pages/admin/AdminUsuarioForm.jsx'
 
-import { obtenerProductoPorId } from './services/productosStorage.js'
+// CONEXIÓN CON EL BACKEND SPRING BOOT
+import { productosApi } from './services/api.js'
+import { obtenerProductosApi } from './services/productosApi.js'
 
 import './App.css'
 
 export default function App() {
+
   const location = useLocation()
 
   // IDENTIFICAR SI ESTAMOS EN UNA RUTA ADMINISTRATIVA
@@ -37,150 +40,348 @@ export default function App() {
   // COMPROBAR SESIÓN DEL ADMINISTRADOR DE DEMOSTRACIÓN
   const adminActivo = sessionStorage.getItem('adminActivo') === 'true'
 
+
   // ESTADO DEL CLIENTE QUE INICIÓ SESIÓN
   const [usuarioActivo, setUsuarioActivo] = useState(() => {
+
     try {
+
       const cliente = localStorage.getItem('clienteActivo')
+
       return cliente ? JSON.parse(cliente) : null
+
     } catch {
+
       return null
     }
   })
 
+
   // ACTUALIZAR EL CLIENTE CUANDO INICIA O CIERRA SESIÓN
   function actualizarUsuarioActivo(usuario) {
+
     setUsuarioActivo(usuario)
   }
 
+
   // ESTADO DEL CARRITO CON PERSISTENCIA EN LOCALSTORAGE
   const [carrito, setCarrito] = useState(() => {
+
     try {
+
       const guardado = JSON.parse(
         localStorage.getItem('carrito') || '[]'
       )
 
       return Array.isArray(guardado) ? guardado : []
+
     } catch {
+
       return []
     }
   })
 
+
   // GUARDAR CARRITO AUTOMÁTICAMENTE
   useEffect(() => {
-    localStorage.setItem('carrito', JSON.stringify(carrito))
+
+    localStorage.setItem(
+      'carrito',
+      JSON.stringify(carrito)
+    )
+
   }, [carrito])
 
-  // AGREGAR UN PRODUCTO AL CARRITO CON CONTROL DE STOCK
-  function agregarAlCarrito(producto, cantidad = 1) {
-    const cantidadAgregar =
-      Number.isInteger(cantidad) && cantidad > 0 ? cantidad : 1
 
-    const prodBd = obtenerProductoPorId(producto.id)
+  // VALIDAR LOS PRODUCTOS GUARDADOS DEL CARRITO
+  // EVITAMOS MEZCLAR LOS ID ANTIGUOS CON LOS ID DE H2
+  useEffect(() => {
 
-    const stockMaximo = prodBd
-      ? Number(prodBd.stock ?? 0)
-      : Number(producto.stock ?? 99)
+    let activo = true
 
-    if (stockMaximo <= 0) {
-      alert(`Lo sentimos, "${producto.nombre}" está agotado en inventario.`)
-      return
+    async function validarCarritoGuardado() {
+
+      try {
+
+        const productosBackend = await obtenerProductosApi()
+
+        if (!activo) return
+
+        setCarrito((carritoActual) => {
+
+          return carritoActual
+            .filter((item) => {
+
+              // BUSCAR EL PRODUCTO POR ID EN H2
+              const productoReal = productosBackend.find(
+                (producto) => producto.id === item.id
+              )
+
+              // VERIFICAR TAMBIÉN EL NOMBRE
+              // PARA DESCARTAR PRODUCTOS ANTIGUOS
+              return (
+                productoReal &&
+                productoReal.nombre === item.nombre
+              )
+            })
+            .map((item) => {
+
+              const productoReal = productosBackend.find(
+                (producto) => producto.id === item.id
+              )
+
+              const stockReal = Number(
+                productoReal.stock ?? 0
+              )
+
+              return {
+                ...item,
+                nombre: productoReal.nombre,
+                precio: productoReal.precio,
+                imagen: productoReal.imagen,
+                stock: stockReal,
+                cantidad: Math.min(
+                  Number(item.cantidad || 1),
+                  stockReal
+                )
+              }
+            })
+            .filter((item) => item.cantidad > 0)
+        })
+
+      } catch (error) {
+
+        console.error(
+          'No se pudo validar el carrito con H2:',
+          error
+        )
+      }
     }
 
-    setCarrito((carritoActual) => {
-      const productoExistente = carritoActual.find(
-        (item) => item.id === producto.id
+    validarCarritoGuardado()
+
+    return () => {
+      activo = false
+    }
+
+  }, [])
+
+
+  // BUSCAR UN PRODUCTO EN SPRING BOOT POR SU ID
+  async function consultarProductoBackend(id) {
+
+    const respuesta = await productosApi.get(
+      `/productos/${id}`
+    )
+
+    return respuesta.data
+  }
+
+
+  // AGREGAR UN PRODUCTO AL CARRITO CON CONTROL DE STOCK
+  async function agregarAlCarrito(producto, cantidad = 1) {
+
+    const cantidadAgregar =
+      Number.isInteger(cantidad) && cantidad > 0
+        ? cantidad
+        : 1
+
+    try {
+
+      // CONSULTAR EL PRODUCTO REAL EN H2
+      const productoBd = await consultarProductoBackend(
+        producto.id
       )
 
-      if (productoExistente) {
-        if (productoExistente.cantidad >= stockMaximo) {
-          alert(
-            `Ya tienes el stock máximo disponible (${stockMaximo} un.) de "${producto.nombre}" en el carrito.`
+      // VERIFICAR QUE NO SEA UN PRODUCTO ANTIGUO
+      if (productoBd.nombre !== producto.nombre) {
+
+        alert(
+          'El producto seleccionado no coincide con el catálogo actual.'
+        )
+
+        return
+      }
+
+      const stockMaximo = Number(
+        productoBd.stock ?? 0
+      )
+
+      // IMPEDIR AGREGAR PRODUCTOS AGOTADOS
+      if (stockMaximo <= 0) {
+
+        alert(
+          `Lo sentimos, "${productoBd.nombre}" está agotado en inventario.`
+        )
+
+        return
+      }
+
+      setCarrito((carritoActual) => {
+
+        const productoExistente = carritoActual.find(
+          (item) => item.id === productoBd.id
+        )
+
+        // SI EL PRODUCTO YA ESTÁ EN EL CARRITO
+        if (productoExistente) {
+
+          // EVITAR SUPERAR EL STOCK DISPONIBLE
+          if (productoExistente.cantidad >= stockMaximo) {
+
+            return carritoActual
+          }
+
+          const cantidadDeseada =
+            Number(productoExistente.cantidad || 0) +
+            cantidadAgregar
+
+          const cantidadFinal = Math.min(
+            cantidadDeseada,
+            stockMaximo
           )
-          return carritoActual
+
+          return carritoActual.map((item) =>
+            item.id === productoBd.id
+              ? {
+                  ...item,
+                  nombre: productoBd.nombre,
+                  precio: productoBd.precio,
+                  imagen: productoBd.imagen,
+                  cantidad: cantidadFinal,
+                  stock: stockMaximo
+                }
+              : item
+          )
         }
 
-        const cantidadDeseada =
-          Number(productoExistente.cantidad || 0) + cantidadAgregar
-
-        const cantidadFinal = Math.min(
-          cantidadDeseada,
+        // SI EL PRODUCTO TODAVÍA NO ESTÁ EN EL CARRITO
+        const cantidadInicial = Math.min(
+          cantidadAgregar,
           stockMaximo
         )
 
-        return carritoActual.map((item) =>
-          item.id === producto.id
-            ? {
-                ...item,
-                cantidad: cantidadFinal,
-                stock: stockMaximo
-              }
-            : item
-        )
-      }
+        return [
+          ...carritoActual,
+          {
+            id: productoBd.id,
+            nombre: productoBd.nombre,
+            precio: productoBd.precio,
+            imagen: productoBd.imagen,
+            stock: stockMaximo,
+            cantidad: cantidadInicial
+          }
+        ]
+      })
 
-      const cantidadInicial = Math.min(
-        cantidadAgregar,
-        stockMaximo
+    } catch (error) {
+
+      console.error(
+        'Error al agregar el producto al carrito:',
+        error
       )
 
-      return [
-        ...carritoActual,
-        {
-          id: producto.id,
-          nombre: producto.nombre,
-          precio: producto.precio,
-          imagen: producto.imagen,
-          stock: stockMaximo,
-          cantidad: cantidadInicial
-        }
-      ]
-    })
+      alert(
+        'No fue posible consultar el producto. Verifica que Spring Boot esté funcionando.'
+      )
+    }
   }
 
+
   // MODIFICAR CANTIDAD DE UN PRODUCTO (+1 O -1)
-  function modificarCantidad(id, cambio) {
-    const prodBd = obtenerProductoPorId(id)
+  async function modificarCantidad(id, cambio) {
 
-    setCarrito((carritoActual) =>
-      carritoActual
-        .map((item) => {
-          if (item.id === id) {
-            const stockMaximo = prodBd
-              ? Number(prodBd.stock ?? 0)
-              : Number(item.stock ?? 99)
+    // SI QUEREMOS DISMINUIR LA CANTIDAD
+    if (cambio < 0) {
 
-            const nuevaCantidad =
-              Number(item.cantidad || 1) + cambio
+      setCarrito((carritoActual) =>
+        carritoActual
+          .map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  cantidad:
+                    Number(item.cantidad || 1) + cambio
+                }
+              : item
+          )
+          .filter((item) => item.cantidad > 0)
+      )
 
-            // IMPEDIR SUPERAR EL STOCK DISPONIBLE
-            if (cambio > 0 && nuevaCantidad > stockMaximo) {
-              return item
-            }
+      return
+    }
 
+    // SI QUEREMOS AUMENTAR, CONSULTAMOS EL STOCK REAL
+    try {
+
+      const productoBd = await consultarProductoBackend(id)
+
+      const stockMaximo = Number(
+        productoBd.stock ?? 0
+      )
+
+      setCarrito((carritoActual) =>
+        carritoActual.map((item) => {
+
+          if (item.id !== id) {
+            return item
+          }
+
+          // PROTEGER CONTRA ID ANTIGUOS
+          if (item.nombre !== productoBd.nombre) {
+            return item
+          }
+
+          const nuevaCantidad =
+            Number(item.cantidad || 1) + cambio
+
+          if (nuevaCantidad > stockMaximo) {
             return {
               ...item,
-              cantidad: nuevaCantidad,
               stock: stockMaximo
             }
           }
 
-          return item
+          return {
+            ...item,
+            cantidad: nuevaCantidad,
+            stock: stockMaximo,
+            precio: productoBd.precio
+          }
         })
-        .filter((item) => item.cantidad > 0)
-    )
+      )
+
+    } catch (error) {
+
+      console.error(
+        'Error al consultar stock:',
+        error
+      )
+
+      alert(
+        'No fue posible verificar el stock disponible.'
+      )
+    }
   }
+
 
   // ELIMINAR UN PRODUCTO DEL CARRITO
   function eliminarProducto(id) {
+
     setCarrito((carritoActual) =>
-      carritoActual.filter((item) => item.id !== id)
+      carritoActual.filter(
+        (item) => item.id !== id
+      )
     )
   }
 
+
   // VACIAR TODO EL CARRITO
   function vaciarCarrito() {
+
     setCarrito([])
   }
+
 
   // CANTIDAD TOTAL DE PRODUCTOS EN EL CARRITO
   const cantidadCarrito = carrito.reduce(
@@ -189,7 +390,9 @@ export default function App() {
     0
   )
 
+
   return (
+
     <div className="d-flex flex-column min-vh-100">
 
       {/* BARRA DE NAVEGACIÓN DE LA TIENDA */}
@@ -197,12 +400,16 @@ export default function App() {
         <Navbar
           cantidadCarrito={cantidadCarrito}
           usuarioActivo={usuarioActivo}
-          onCerrarSesion={() => actualizarUsuarioActivo(null)}
+          onCerrarSesion={() =>
+            actualizarUsuarioActivo(null)
+          }
         />
       )}
 
+
       {/* CONTENIDO PRINCIPAL */}
       <main className="flex-grow-1">
+
         <Routes>
 
           {/* PÁGINA PRINCIPAL */}
@@ -210,6 +417,7 @@ export default function App() {
             path="/"
             element={<Inicio />}
           />
+
 
           {/* CATÁLOGO DE PRODUCTOS */}
           <Route
@@ -221,6 +429,7 @@ export default function App() {
             }
           />
 
+
           {/* DETALLE DE PRODUCTO */}
           <Route
             path="/producto-detalle"
@@ -230,6 +439,7 @@ export default function App() {
               />
             }
           />
+
 
           {/* NOSOTROS Y CONTACTO */}
           <Route
@@ -242,6 +452,7 @@ export default function App() {
             element={<Contacto />}
           />
 
+
           {/* INICIO DE SESIÓN */}
           <Route
             path="/login"
@@ -252,17 +463,20 @@ export default function App() {
             }
           />
 
+
           {/* REGISTRO */}
           <Route
             path="/registro"
             element={<Registro />}
           />
 
+
           {/* BLOG */}
           <Route
             path="/blogs"
             element={<Blogs />}
           />
+
 
           {/* CARRITO */}
           <Route
@@ -278,6 +492,7 @@ export default function App() {
             }
           />
 
+
           {/* ADMINISTRACIÓN: DASHBOARD */}
           <Route
             path="/admin"
@@ -287,6 +502,7 @@ export default function App() {
                 : <Navigate to="/login" replace />
             }
           />
+
 
           {/* ADMINISTRACIÓN: PRODUCTOS */}
           <Route
@@ -298,6 +514,7 @@ export default function App() {
             }
           />
 
+
           {/* ADMINISTRACIÓN: CREAR Y EDITAR PRODUCTOS */}
           <Route
             path="/admin/producto-form"
@@ -308,6 +525,7 @@ export default function App() {
             }
           />
 
+
           {/* ADMINISTRACIÓN: USUARIOS */}
           <Route
             path="/admin/usuarios"
@@ -317,6 +535,7 @@ export default function App() {
                 : <Navigate to="/login" replace />
             }
           />
+
 
           {/* ADMINISTRACIÓN: CREAR Y EDITAR USUARIOS */}
           <Route
@@ -329,7 +548,9 @@ export default function App() {
           />
 
         </Routes>
+
       </main>
+
 
       {/* PIE DE PÁGINA DE LA TIENDA */}
       {!esAdmin && <Footer />}

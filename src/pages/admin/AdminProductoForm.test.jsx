@@ -11,7 +11,8 @@ import {
 import {
   render,
   screen,
-  fireEvent
+  fireEvent,
+  waitFor
 } from '@testing-library/react'
 
 import {
@@ -22,39 +23,70 @@ import {
 
 import AdminProductoForm from './AdminProductoForm.jsx'
 
-import {
-  obtenerProductoPorId,
-  crearProducto,
-  actualizarProducto
-} from '../../services/productosStorage.js'
+// CONEXIÓN CON SPRING BOOT
+import { productosApi } from '../../services/api.js'
 
-// Simular los servicios de productos
-vi.mock('../../services/productosStorage.js', () => ({
-  obtenerProductoPorId: vi.fn(),
-  crearProducto: vi.fn(),
-  actualizarProducto: vi.fn()
+
+// =============================================
+// SIMULAR AXIOS
+// =============================================
+
+vi.mock('../../services/api.js', () => ({
+  productosApi: {
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn()
+  }
 }))
 
-// Mostrar el formulario con rutas de prueba
+
+// =============================================
+// PRODUCTO SIMULADO
+// =============================================
+
+const productoOriginal = {
+  id: 15,
+  nombre: 'Perfume Original',
+  categoria: 'Hombre',
+  precio: 39990,
+  stock: 8,
+  imagen: '/img/Perfume3.webp',
+  descripcion: 'Aroma amaderado'
+}
+
+
+// =============================================
+// MOSTRAR EL FORMULARIO CON RUTAS
+// =============================================
+
 function mostrar(ruta = '/admin/producto-form') {
+
   return render(
     <MemoryRouter initialEntries={[ruta]}>
       <Routes>
+
         <Route
           path="/admin/producto-form"
           element={<AdminProductoForm />}
         />
+
         <Route
           path="/admin/productos"
           element={<p>Inventario de prueba</p>}
         />
+
       </Routes>
     </MemoryRouter>
   )
 }
 
-// Completar los campos del formulario
+
+// =============================================
+// COMPLETAR LOS CAMPOS DEL FORMULARIO
+// =============================================
+
 function completarFormulario(cambios = {}) {
+
   const datos = {
     nombre: 'Perfume Aurora',
     categoria: 'Mujer',
@@ -66,57 +98,115 @@ function completarFormulario(cambios = {}) {
 
   fireEvent.change(
     screen.getByLabelText(/Nombre de la fragancia/i),
-    { target: { value: datos.nombre } }
+    {
+      target: {
+        value: datos.nombre
+      }
+    }
   )
 
   fireEvent.change(
     screen.getByLabelText(/Categoría/i),
-    { target: { value: datos.categoria } }
+    {
+      target: {
+        value: datos.categoria
+      }
+    }
   )
 
   fireEvent.change(
     screen.getByLabelText(/Precio \(CLP\)/i),
-    { target: { value: datos.precio } }
+    {
+      target: {
+        value: datos.precio
+      }
+    }
   )
 
   fireEvent.change(
     screen.getByLabelText(/Stock en bodega/i),
-    { target: { value: datos.stock } }
+    {
+      target: {
+        value: datos.stock
+      }
+    }
   )
 
   fireEvent.change(
     screen.getByLabelText(/Descripción y notas olfativas/i),
-    { target: { value: datos.descripcion } }
+    {
+      target: {
+        value: datos.descripcion
+      }
+    }
   )
 }
 
-// Ejecutar directamente el envío para probar
-// también las validaciones internas del componente
+
+// =============================================
+// ENVIAR EL FORMULARIO
+// =============================================
+
 function enviarFormulario() {
+
   const boton = screen.getByRole('button', {
     name: /Crear Producto|Guardar Cambios/i
   })
 
-  fireEvent.submit(boton.closest('form'))
+  fireEvent.submit(
+    boton.closest('form')
+  )
 }
 
-describe('AdminProductoForm', () => {
+
+// =============================================
+// PRUEBAS DEL FORMULARIO ADMINISTRATIVO
+// =============================================
+
+describe('AdminProductoForm - Spring Boot y H2', () => {
 
   beforeEach(() => {
+
     vi.clearAllMocks()
-    vi.mocked(obtenerProductoPorId).mockReturnValue(null)
+
+    // GET: cargar producto para editar.
+    vi.mocked(productosApi.get)
+      .mockResolvedValue({
+        data: productoOriginal
+      })
+
+    // POST: crear producto.
+    vi.mocked(productosApi.post)
+      .mockResolvedValue({
+        data: {
+          ...productoOriginal,
+          id: 30
+        }
+      })
+
+    // PUT: actualizar producto.
+    vi.mocked(productosApi.put)
+      .mockResolvedValue({
+        data: productoOriginal
+      })
+
   })
 
+
   afterEach(() => {
+
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
+
   })
+
 
   // =========================================
   // PRUEBA 1: FORMULARIO DE CREACIÓN
   // =========================================
 
   test('muestra el formulario para crear productos', () => {
+
     mostrar()
 
     expect(
@@ -138,13 +228,30 @@ describe('AdminProductoForm', () => {
     expect(
       screen.getByLabelText(/Categoría/i)
     ).toHaveValue('Unisex')
+
+    // Al crear, no necesitamos consultar un ID.
+    expect(productosApi.get).not.toHaveBeenCalled()
+
   })
+
 
   // =========================================
   // PRUEBA 2: PRODUCTO INEXISTENTE
   // =========================================
 
-  test('informa si el producto a editar no existe', () => {
+  test('informa si el producto a editar no existe', async () => {
+
+    // Spring Boot devuelve 404.
+    vi.mocked(productosApi.get)
+      .mockRejectedValue({
+        response: {
+          status: 404
+        }
+      })
+
+    vi.spyOn(console, 'error')
+      .mockImplementation(() => {})
+
     mostrar('/admin/producto-form?id=99999')
 
     expect(
@@ -153,33 +260,30 @@ describe('AdminProductoForm', () => {
       })
     ).toBeInTheDocument()
 
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'El producto que intentas editar no existe.'
+    expect(
+      await screen.findByRole('alert')
+    ).toHaveTextContent(
+      'El producto que intentas editar no existe en H2.'
     )
 
-    expect(obtenerProductoPorId).toHaveBeenCalledWith('99999')
+    expect(productosApi.get).toHaveBeenCalledWith(
+      '/productos/99999'
+    )
+
   })
+
 
   // =========================================
   // PRUEBA 3: CARGAR PRODUCTO EXISTENTE
   // =========================================
 
-  test('carga los datos de un producto para editar', () => {
-    vi.mocked(obtenerProductoPorId).mockReturnValue({
-      id: '15',
-      nombre: 'Perfume Original',
-      categoria: 'Hombre',
-      precio: 39990,
-      stock: 8,
-      imagen: '/img/Perfume3.webp',
-      descripcion: 'Aroma amaderado'
-    })
+  test('carga los datos de un producto para editar', async () => {
 
     mostrar('/admin/producto-form?id=15')
 
     expect(
-      screen.getByLabelText(/Nombre de la fragancia/i)
-    ).toHaveValue('Perfume Original')
+      await screen.findByDisplayValue('Perfume Original')
+    ).toBeInTheDocument()
 
     expect(
       screen.getByLabelText(/Categoría/i)
@@ -199,79 +303,117 @@ describe('AdminProductoForm', () => {
 
     expect(
       screen.getByAltText('Foto de la fragancia')
-    ).toHaveAttribute('src', '/img/Perfume3.webp')
+    ).toHaveAttribute(
+      'src',
+      '/img/Perfume3.webp'
+    )
 
     expect(
       screen.getByText('Imagen actual del producto')
     ).toBeInTheDocument()
+
+    expect(productosApi.get).toHaveBeenCalledWith(
+      '/productos/15'
+    )
+
   })
 
+
   // =========================================
-  // PRUEBA 4: DATOS OPCIONALES AL EDITAR
+  // PRUEBA 4: DATOS OPCIONALES
   // =========================================
 
-  test('usa valores predeterminados si faltan imagen y descripción', () => {
-    vi.mocked(obtenerProductoPorId).mockReturnValue({
-      id: '18',
-      nombre: 'Perfume Sin Imagen',
-      categoria: 'Unisex',
-      precio: 25000,
-      stock: 3
-    })
+  test('usa valores predeterminados si faltan imagen y descripción', async () => {
+
+    vi.mocked(productosApi.get)
+      .mockResolvedValue({
+        data: {
+          id: 18,
+          nombre: 'Perfume Sin Imagen',
+          categoria: 'Unisex',
+          precio: 25000,
+          stock: 3
+        }
+      })
 
     mostrar('/admin/producto-form?id=18')
 
+    await screen.findByDisplayValue(
+      'Perfume Sin Imagen'
+    )
+
     expect(
       screen.getByAltText('Foto de la fragancia')
-    ).toHaveAttribute('src', '/img/Perfume1.webp')
+    ).toHaveAttribute(
+      'src',
+      '/img/Perfume1.webp'
+    )
 
     expect(
       screen.getByLabelText(/Descripción y notas olfativas/i)
     ).toHaveValue('')
+
   })
+
 
   // =========================================
   // PRUEBA 5: CREAR PRODUCTO
   // =========================================
 
-  test('crea correctamente un perfume', () => {
+  test('crea correctamente un perfume mediante POST', async () => {
+
     mostrar()
 
     completarFormulario()
     enviarFormulario()
 
-    expect(crearProducto).toHaveBeenCalledWith({
-      nombre: 'Perfume Aurora',
-      categoria: 'Mujer',
-      precio: 49990,
-      stock: 12,
-      imagen: '/img/Perfume1.webp',
-      descripcion: 'Fragancia floral'
+    await waitFor(() => {
+
+      expect(productosApi.post).toHaveBeenCalledWith(
+        '/productos',
+        {
+          nombre: 'Perfume Aurora',
+          categoria: 'Mujer',
+          precio: 49990,
+          stock: 12,
+          imagen: '/img/Perfume1.webp',
+          descripcion: 'Fragancia floral'
+        }
+      )
+
     })
 
-    expect(actualizarProducto).not.toHaveBeenCalled()
+    expect(productosApi.put).not.toHaveBeenCalled()
 
     expect(
-      screen.getByText('Inventario de prueba')
+      await screen.findByText('Inventario de prueba')
     ).toBeInTheDocument()
+
   })
+
 
   // =========================================
   // PRUEBA 6: ACTUALIZAR PRODUCTO
   // =========================================
 
-  test('actualiza correctamente un perfume', () => {
-    vi.mocked(obtenerProductoPorId).mockReturnValue({
-      id: '15',
-      nombre: 'Perfume Antiguo',
-      categoria: 'Unisex',
-      precio: 20000,
-      stock: 5,
-      imagen: '/img/Perfume2.webp',
-      descripcion: 'Descripción anterior'
-    })
+  test('actualiza correctamente un perfume mediante PUT', async () => {
+
+    vi.mocked(productosApi.get)
+      .mockResolvedValue({
+        data: {
+          ...productoOriginal,
+          nombre: 'Perfume Antiguo',
+          categoria: 'Unisex',
+          precio: 20000,
+          stock: 5,
+          imagen: '/img/Perfume2.webp',
+          descripcion: 'Descripción anterior'
+        }
+      })
 
     mostrar('/admin/producto-form?id=15')
+
+    await screen.findByDisplayValue('Perfume Antiguo')
 
     completarFormulario({
       nombre: 'Perfume Actualizado',
@@ -281,27 +423,33 @@ describe('AdminProductoForm', () => {
 
     enviarFormulario()
 
-    expect(actualizarProducto).toHaveBeenCalledWith(
-      '15',
-      {
-        nombre: 'Perfume Actualizado',
-        categoria: 'Mujer',
-        precio: 59990,
-        stock: 20,
-        imagen: '/img/Perfume2.webp',
-        descripcion: 'Fragancia floral'
-      }
-    )
+    await waitFor(() => {
 
-    expect(crearProducto).not.toHaveBeenCalled()
+      expect(productosApi.put).toHaveBeenCalledWith(
+        '/productos/15',
+        {
+          nombre: 'Perfume Actualizado',
+          categoria: 'Mujer',
+          precio: 59990,
+          stock: 20,
+          imagen: '/img/Perfume2.webp',
+          descripcion: 'Fragancia floral'
+        }
+      )
+
+    })
+
+    expect(productosApi.post).not.toHaveBeenCalled()
 
     expect(
-      screen.getByText('Inventario de prueba')
+      await screen.findByText('Inventario de prueba')
     ).toBeInTheDocument()
+
   })
 
+
   // =========================================
-  // PRUEBA 7: VALIDACIONES DEL FORMULARIO
+  // PRUEBAS 7-12: VALIDACIONES
   // =========================================
 
   test.each([
@@ -313,31 +461,32 @@ describe('AdminProductoForm', () => {
     [
       'precio vacío',
       { precio: '' },
-      'Por favor ingresa un precio válido mayor a 0.'
+      'Ingresa un precio válido mayor a 0.'
     ],
     [
       'precio igual a cero',
       { precio: '0' },
-      'Por favor ingresa un precio válido mayor a 0.'
+      'Ingresa un precio válido mayor a 0.'
     ],
     [
       'precio negativo',
       { precio: '-100' },
-      'Por favor ingresa un precio válido mayor a 0.'
+      'Ingresa un precio válido mayor a 0.'
     ],
     [
       'stock vacío',
       { stock: '' },
-      'Por favor ingresa un stock válido (0 o mayor).'
+      'Ingresa un stock válido, igual o mayor a 0.'
     ],
     [
       'stock negativo',
       { stock: '-5' },
-      'Por favor ingresa un stock válido (0 o mayor).'
+      'Ingresa un stock válido, igual o mayor a 0.'
     ]
   ])(
     'valida correctamente %s',
     (_nombreCaso, datos, mensaje) => {
+
       mostrar()
 
       completarFormulario(datos)
@@ -347,33 +496,48 @@ describe('AdminProductoForm', () => {
         screen.getByRole('alert')
       ).toHaveTextContent(mensaje)
 
-      expect(crearProducto).not.toHaveBeenCalled()
-      expect(actualizarProducto).not.toHaveBeenCalled()
+      // No debe llamar al backend.
+      expect(productosApi.post).not.toHaveBeenCalled()
+      expect(productosApi.put).not.toHaveBeenCalled()
+
     }
   )
 
+
   // =========================================
-  // PRUEBA 8: STOCK CERO
+  // PRUEBA 13: STOCK CERO
   // =========================================
 
-  test('permite crear un producto con stock cero', () => {
+  test('permite crear un producto con stock cero', async () => {
+
     mostrar()
 
-    completarFormulario({ stock: '0' })
+    completarFormulario({
+      stock: '0'
+    })
+
     enviarFormulario()
 
-    expect(crearProducto).toHaveBeenCalledWith(
-      expect.objectContaining({
-        stock: 0
-      })
-    )
+    await waitFor(() => {
+
+      expect(productosApi.post).toHaveBeenCalledWith(
+        '/productos',
+        expect.objectContaining({
+          stock: 0
+        })
+      )
+
+    })
+
   })
 
+
   // =========================================
-  // PRUEBA 9: CATÁLOGO DE IMÁGENES
+  // PRUEBA 14: ABRIR Y CERRAR CATÁLOGO
   // =========================================
 
   test('permite abrir y cerrar el catálogo de imágenes', () => {
+
     mostrar()
 
     fireEvent.click(
@@ -383,7 +547,9 @@ describe('AdminProductoForm', () => {
     )
 
     expect(
-      screen.getByText(/O selecciona una fragancia de muestra/i)
+      screen.getByText(
+        /O selecciona una fragancia de muestra/i
+      )
     ).toBeInTheDocument()
 
     fireEvent.click(
@@ -393,15 +559,20 @@ describe('AdminProductoForm', () => {
     )
 
     expect(
-      screen.queryByText(/O selecciona una fragancia de muestra/i)
+      screen.queryByText(
+        /O selecciona una fragancia de muestra/i
+      )
     ).not.toBeInTheDocument()
+
   })
 
+
   // =========================================
-  // PRUEBA 10: SELECCIONAR IMAGEN
+  // PRUEBA 15: SELECCIONAR IMAGEN
   // =========================================
 
   test('selecciona una imagen del catálogo', () => {
+
     mostrar()
 
     fireEvent.click(
@@ -410,11 +581,16 @@ describe('AdminProductoForm', () => {
       })
     )
 
-    fireEvent.click(screen.getByTitle('Perfume 2'))
+    fireEvent.click(
+      screen.getByTitle('Perfume 2')
+    )
 
     expect(
       screen.getByAltText('Foto de la fragancia')
-    ).toHaveAttribute('src', '/img/Perfume2.webp')
+    ).toHaveAttribute(
+      'src',
+      '/img/Perfume2.webp'
+    )
 
     expect(
       screen.getByText('Perfume de muestra 2')
@@ -427,15 +603,20 @@ describe('AdminProductoForm', () => {
     )
 
     expect(
-      screen.queryByText(/O selecciona una fragancia de muestra/i)
+      screen.queryByText(
+        /O selecciona una fragancia de muestra/i
+      )
     ).not.toBeInTheDocument()
+
   })
 
+
   // =========================================
-  // PRUEBA 11: QUITAR IMAGEN
+  // PRUEBA 16: QUITAR IMAGEN
   // =========================================
 
   test('permite quitar una foto seleccionada', () => {
+
     mostrar()
 
     fireEvent.click(
@@ -444,7 +625,9 @@ describe('AdminProductoForm', () => {
       })
     )
 
-    fireEvent.click(screen.getByTitle('Perfume 3'))
+    fireEvent.click(
+      screen.getByTitle('Perfume 3')
+    )
 
     fireEvent.click(
       screen.getByRole('button', {
@@ -454,21 +637,29 @@ describe('AdminProductoForm', () => {
 
     expect(
       screen.getByAltText('Foto de la fragancia')
-    ).toHaveAttribute('src', '/img/Perfume1.webp')
+    ).toHaveAttribute(
+      'src',
+      '/img/Perfume1.webp'
+    )
 
     expect(
       screen.queryByText('Perfume de muestra 3')
     ).not.toBeInTheDocument()
+
   })
 
+
   // =========================================
-  // PRUEBA 12: ARCHIVO INVÁLIDO
+  // PRUEBA 17: ARCHIVO INVÁLIDO
   // =========================================
 
   test('rechaza archivos que no son imágenes', () => {
+
     const { container } = mostrar()
 
-    const input = container.querySelector('input[type="file"]')
+    const input = container.querySelector(
+      'input[type="file"]'
+    )
 
     const archivo = new File(
       ['contenido'],
@@ -477,22 +668,31 @@ describe('AdminProductoForm', () => {
     )
 
     fireEvent.change(input, {
-      target: { files: [archivo] }
+      target: {
+        files: [archivo]
+      }
     })
 
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'Por favor selecciona un archivo de imagen válido'
+    expect(
+      screen.getByRole('alert')
+    ).toHaveTextContent(
+      'Selecciona una imagen válida: JPG, PNG o WEBP.'
     )
+
   })
 
+
   // =========================================
-  // PRUEBA 13: IMAGEN MAYOR A 10 MB
+  // PRUEBA 18: IMAGEN MAYOR A 10 MB
   // =========================================
 
-  test('rechaza imágenes superiores a 10MB', () => {
+  test('rechaza imágenes superiores a 10 MB', () => {
+
     const { container } = mostrar()
 
-    const input = container.querySelector('input[type="file"]')
+    const input = container.querySelector(
+      'input[type="file"]'
+    )
 
     const archivo = new File(
       ['imagen'],
@@ -505,22 +705,31 @@ describe('AdminProductoForm', () => {
     })
 
     fireEvent.change(input, {
-      target: { files: [archivo] }
+      target: {
+        files: [archivo]
+      }
     })
 
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'La imagen seleccionada supera los 10MB.'
+    expect(
+      screen.getByRole('alert')
+    ).toHaveTextContent(
+      'La imagen seleccionada supera los 10 MB.'
     )
+
   })
 
+
   // =========================================
-  // PRUEBA 14: ARRASTRAR UNA IMAGEN
+  // PRUEBA 19: ARRASTRAR IMAGEN
   // =========================================
 
   test('maneja el arrastre y rechazo de un archivo inválido', () => {
+
     const { container } = mostrar()
 
-    const zona = container.querySelector('.admin-foto-card')
+    const zona = container.querySelector(
+      '.admin-foto-card'
+    )
 
     fireEvent.dragOver(zona)
 
@@ -539,58 +748,84 @@ describe('AdminProductoForm', () => {
     fireEvent.dragOver(zona)
 
     fireEvent.drop(zona, {
-      dataTransfer: { files: [archivo] }
+      dataTransfer: {
+        files: [archivo]
+      }
     })
 
     expect(zona).not.toHaveClass('drag-over')
 
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'Por favor selecciona un archivo de imagen válido'
+    expect(
+      screen.getByRole('alert')
+    ).toHaveTextContent(
+      'Selecciona una imagen válida: JPG, PNG o WEBP.'
     )
+
   })
 
+
   // =========================================
-  // PRUEBA 15: APERTURA DEL SELECTOR
+  // PRUEBA 20: SELECTOR CON BOTÓN Y TECLADO
   // =========================================
 
   test('abre el selector de archivos con botón y teclado', () => {
+
     const { container } = mostrar()
 
-    const input = container.querySelector('input[type="file"]')
-    const abrirArchivo = vi.spyOn(input, 'click')
+    const input = container.querySelector(
+      'input[type="file"]'
+    )
+
+    const abrirArchivo = vi.spyOn(
+      input,
+      'click'
+    )
 
     fireEvent.click(
-      screen.getByRole('button', { name: /Cambiar foto/i })
+      screen.getByRole('button', {
+        name: /Cambiar foto/i
+      })
     )
 
     expect(abrirArchivo).toHaveBeenCalled()
 
-    const avatar = container.querySelector('.admin-avatar-container')
+    const avatar = container.querySelector(
+      '.admin-avatar-container'
+    )
 
-    fireEvent.keyDown(avatar, { key: 'Enter' })
-    fireEvent.keyDown(avatar, { key: ' ' })
+    fireEvent.keyDown(avatar, {
+      key: 'Enter'
+    })
+
+    fireEvent.keyDown(avatar, {
+      key: ' '
+    })
 
     expect(abrirArchivo).toHaveBeenCalledTimes(3)
+
   })
 
+
   // =========================================
-  // PRUEBA 16: ERROR DE CARGA DE IMAGEN
+  // PRUEBA 21: ERROR EN VISTA PREVIA
   // =========================================
 
-  test('usa una imagen predeterminada si falla la vista previa', () => {
-    vi.mocked(obtenerProductoPorId).mockReturnValue({
-      id: '20',
-      nombre: 'Perfume',
-      categoria: 'Unisex',
-      precio: 20000,
-      stock: 2,
-      imagen: '/imagen-inexistente.webp',
-      descripcion: ''
-    })
+  test('usa una imagen predeterminada si falla la vista previa', async () => {
+
+    vi.mocked(productosApi.get)
+      .mockResolvedValue({
+        data: {
+          ...productoOriginal,
+          id: 20,
+          imagen: '/imagen-inexistente.webp'
+        }
+      })
 
     mostrar('/admin/producto-form?id=20')
 
-    const imagen = screen.getByAltText('Foto de la fragancia')
+    const imagen = await screen.findByAltText(
+      'Foto de la fragancia'
+    )
 
     fireEvent.error(imagen)
 
@@ -598,21 +833,31 @@ describe('AdminProductoForm', () => {
       'src',
       '/img/Perfume1.webp'
     )
+
   })
 
+
   // =========================================
-  // PRUEBA 17: CARGA CON IMAGEN NO DECODIFICABLE
+  // PRUEBA 22: IMAGEN NO DECODIFICABLE
   // =========================================
 
-  test('conserva el archivo si falla la optimización de imagen', async () => {
+  test('informa si una imagen no puede decodificarse', async () => {
+
+    // Simular un archivo que el navegador
+    // no consigue convertir en imagen.
     vi.stubGlobal('Image', class {
+
       set src(_valor) {
         this.onerror?.()
       }
+
     })
 
     const { container } = mostrar()
-    const input = container.querySelector('input[type="file"]')
+
+    const input = container.querySelector(
+      'input[type="file"]'
+    )
 
     const archivo = new File(
       ['imagen'],
@@ -621,23 +866,31 @@ describe('AdminProductoForm', () => {
     )
 
     fireEvent.change(input, {
-      target: { files: [archivo] }
+      target: {
+        files: [archivo]
+      }
     })
 
     expect(
-      await screen.findByText('perfume.png')
-    ).toBeInTheDocument()
+      await screen.findByRole('alert')
+    ).toHaveTextContent(
+      'No fue posible leer la imagen seleccionada.'
+    )
 
+    // No debe guardar una imagen inválida
+    // como si se hubiera procesado.
     expect(
       screen.getByAltText('Foto de la fragancia')
     ).toHaveAttribute(
       'src',
-      expect.stringContaining('data:image/png;base64,')
+      '/img/Perfume1.webp'
     )
+
   })
 
+
   // =========================================
-  // PRUEBAS 18-20: REDIMENSIONAMIENTO
+  // PRUEBAS 23-25: REDIMENSIONAR IMÁGENES
   // =========================================
 
   test.each([
@@ -648,13 +901,16 @@ describe('AdminProductoForm', () => {
     'optimiza una imagen %s',
     async (_tipo, ancho, alto, anchoFinal, altoFinal) => {
 
+      // Simular una imagen decodificada.
       vi.stubGlobal('Image', class {
+
         width = ancho
         height = alto
 
         set src(_valor) {
           this.onload?.()
         }
+
       })
 
       const dibujar = vi.fn()
@@ -669,7 +925,9 @@ describe('AdminProductoForm', () => {
       vi.spyOn(
         HTMLCanvasElement.prototype,
         'toDataURL'
-      ).mockReturnValue('data:image/webp;base64,cHJ1ZWJh')
+      ).mockReturnValue(
+        'data:image/webp;base64,cHJ1ZWJh'
+      )
 
       const { container } = mostrar()
 
@@ -681,7 +939,11 @@ describe('AdminProductoForm', () => {
 
       fireEvent.change(
         container.querySelector('input[type="file"]'),
-        { target: { files: [archivo] } }
+        {
+          target: {
+            files: [archivo]
+          }
+        }
       )
 
       expect(
@@ -702,6 +964,70 @@ describe('AdminProductoForm', () => {
         'src',
         'data:image/webp;base64,cHJ1ZWJh'
       )
+
     }
   )
+
+
+  // =========================================
+  // PRUEBA 26: ERROR AL GUARDAR
+  // =========================================
+
+  test('muestra un error si Spring Boot no permite guardar', async () => {
+
+    vi.mocked(productosApi.post)
+      .mockRejectedValue({
+        response: {
+          status: 400
+        }
+      })
+
+    vi.spyOn(console, 'error')
+      .mockImplementation(() => {})
+
+    mostrar()
+
+    completarFormulario()
+    enviarFormulario()
+
+    expect(
+      await screen.findByRole('alert')
+    ).toHaveTextContent(
+      'Spring Boot rechazó los datos del producto.'
+    )
+
+    // No debe redirigir si no se guardó.
+    expect(
+      screen.getByRole('heading', {
+        name: 'Crear Nuevo Perfume'
+      })
+    ).toBeInTheDocument()
+
+  })
+
+
+  // =========================================
+  // PRUEBA 27: ERROR DE CONEXIÓN AL EDITAR
+  // =========================================
+
+  test('muestra un error si Spring Boot no responde al editar', async () => {
+
+    vi.mocked(productosApi.get)
+      .mockRejectedValue(
+        new Error('Servidor no disponible')
+      )
+
+    vi.spyOn(console, 'error')
+      .mockImplementation(() => {})
+
+    mostrar('/admin/producto-form?id=15')
+
+    expect(
+      await screen.findByRole('alert')
+    ).toHaveTextContent(
+      'No fue posible cargar el perfume.'
+    )
+
+  })
+
 })

@@ -1,339 +1,432 @@
-// =============================================
-// PERFULANDIA - PRUEBAS UNITARIAS
-// PÁGINA PRODUCTOS
-// =============================================
-
-// HERRAMIENTAS DE VITEST
-import {
-  describe,
-  test,
-  expect,
-  beforeEach,
-  vi
-} from "vitest";
-
-// HERRAMIENTAS DE TESTING LIBRARY
-import {
-  render,
-  screen
-} from "@testing-library/react";
 
-// SIMULAR ACCIONES DEL USUARIO
-import userEvent from "@testing-library/user-event";
+ // =============================================
+ // PERFULANDIA - PRUEBAS UNITARIAS
+ // PÁGINA PRODUCTOS
+ // INTEGRACIÓN CON SPRING BOOT + H2
+ // =============================================
+
+ // HERRAMIENTAS DE VITEST
+ import {
+   describe,
+   test,
+   expect,
+   beforeEach,
+   afterEach,
+   vi
+ } from "vitest";
+
+ // HERRAMIENTAS DE TESTING LIBRARY
+ import {
+   render,
+   screen
+ } from "@testing-library/react";
+
+ // SIMULAR ACCIONES DEL USUARIO
+ import userEvent from "@testing-library/user-event";
+
+ // COMPONENTE QUE VAMOS A PROBAR
+ import Productos from "./Productos.jsx";
 
-// COMPONENTE QUE VAMOS A PROBAR
-import Productos from "./Productos.jsx";
-
-// SERVICIO DE PRODUCTOS
-import { obtenerProductos } from "../services/productosStorage.js";
+ // SERVICIO API DE PRODUCTOS
+ import {
+   obtenerProductosApi
+ } from "../services/productosApi.js";
+
+
+ // =============================================
+ // SIMULAR EL SERVICIO API DE PRODUCTOS
+ // =============================================
 
-
-// =============================================
-// SIMULAR EL SERVICIO DE PRODUCTOS
-// =============================================
-
-vi.mock("../services/productosStorage.js", () => ({
-  obtenerProductos: vi.fn()
-}));
+ vi.mock("../services/productosApi.js", () => ({
+   obtenerProductosApi: vi.fn()
+ }));
 
 
-// =============================================
-// SIMULAR LA TARJETA DE PRODUCTO
-// =============================================
+ // =============================================
+ // SIMULAR LA TARJETA DE PRODUCTO
+ // =============================================
 
-vi.mock("../components/ProductoCatalogoCard.jsx", () => ({
-  default: ({ producto, onAgregar }) => (
-    <div data-testid={`producto-${producto.id}`}>
+ vi.mock("../components/ProductoCatalogoCard.jsx", () => ({
+   default: ({ producto, onAgregar }) => (
+     <div data-testid={`producto-${producto.id}`}>
 
-      <h2>{producto.nombre}</h2>
+       <h2>{producto.nombre}</h2>
 
-      <button
-        type="button"
-        onClick={() => onAgregar(producto)}
-      >
-        Agregar {producto.nombre}
-      </button>
+       <button
+         type="button"
+         onClick={() => onAgregar(producto)}
+       >
+         Agregar {producto.nombre}
+       </button>
 
-    </div>
-  )
-}));
+     </div>
+   )
+ }));
 
 
-// =============================================
-// DATOS DE PRUEBA
-// =============================================
+ // =============================================
+ // DATOS SIMULADOS DE SPRING BOOT
+ // =============================================
 
-const productosSimulados = [
-  {
-    id: 1,
-    nombre: "Rosa Floral",
-    categoria: "Mujer",
-    precio: 29990
-  },
-  {
-    id: 2,
-    nombre: "Bosque Intenso",
-    categoria: "Hombre",
-    precio: 38990
-  },
-  {
-    id: 3,
-    nombre: "Brisa",
-    categoria: "Unisex",
-    precio: 34990
-  }
-];
+ const productosSimulados = [
+   {
+     id: 1,
+     nombre: "Rosa Floral",
+     categoria: "Mujer",
+     precio: 29990,
+     stock: 8
+   },
+   {
+     id: 2,
+     nombre: "Bosque Intenso",
+     categoria: "Hombre",
+     precio: 38990,
+     stock: 5
+   },
+   {
+     id: 3,
+     nombre: "Brisa",
+     categoria: "Unisex",
+     precio: 34990,
+     stock: 3
+   }
+ ];
 
 
-// =============================================
-// GRUPO DE PRUEBAS
-// =============================================
+ // =============================================
+ // GRUPO DE PRUEBAS
+ // =============================================
 
-describe("Página Productos - Perfulandia", () => {
+ describe("Página Productos - Perfulandia", () => {
 
-  // PREPARACIÓN ANTES DE CADA PRUEBA
-  beforeEach(() => {
+   // PREPARACIÓN ANTES DE CADA PRUEBA
+   beforeEach(() => {
 
-    // Limpiar historial de los mocks
-    vi.clearAllMocks();
+     vi.clearAllMocks();
 
-    // Preparar los productos simulados
-    vi.mocked(obtenerProductos)
-      .mockReturnValue(productosSimulados);
+     // Simulamos una respuesta exitosa de Spring Boot.
+     vi.mocked(obtenerProductosApi)
+       .mockResolvedValue(productosSimulados);
 
-  });
+   });
 
 
-  // =========================================
-  // PRUEBA 1: MOSTRAR PRODUCTOS
-  // =========================================
+   // LIMPIEZA DESPUÉS DE CADA PRUEBA
+   afterEach(() => {
+     vi.restoreAllMocks();
+   });
 
-  test("muestra los productos del catálogo", () => {
 
-    // PREPARAR
-    const onAgregarProducto = vi.fn();
+   // =========================================
+   // PRUEBA 1: MOSTRAR PRODUCTOS
+   // =========================================
 
-    render(
-      <Productos onAgregarProducto={onAgregarProducto} />
-    );
+   test("muestra los productos del catálogo", async () => {
 
-    // COMPROBAR
-    expect(obtenerProductos).toHaveBeenCalled();
+     const onAgregarProducto = vi.fn();
 
-    expect(
-      screen.getByText("Rosa Floral")
-    ).toBeInTheDocument();
+     render(
+       <Productos onAgregarProducto={onAgregarProducto} />
+     );
 
-    expect(
-      screen.getByText("Bosque Intenso")
-    ).toBeInTheDocument();
+     // Esperamos la respuesta simulada de Spring Boot.
+     expect(
+       await screen.findByText("Rosa Floral")
+     ).toBeInTheDocument();
 
-    expect(
-      screen.getByText("Brisa")
-    ).toBeInTheDocument();
+     expect(obtenerProductosApi).toHaveBeenCalled();
 
-  });
+     expect(
+       screen.getByText("Bosque Intenso")
+     ).toBeInTheDocument();
 
+     expect(
+       screen.getByText("Brisa")
+     ).toBeInTheDocument();
 
-  // =========================================
-  // PRUEBA 2: BUSCAR PRODUCTOS
-  // =========================================
+   });
 
-  test("filtra productos por nombre", async () => {
 
-    // PREPARAR
-    const user = userEvent.setup();
+   // =========================================
+   // PRUEBA 2: BUSCAR PRODUCTOS
+   // =========================================
 
-    render(
-      <Productos onAgregarProducto={vi.fn()} />
-    );
+   test("filtra productos por nombre", async () => {
 
-    // ACTUAR
-    await user.type(
-      screen.getByRole("textbox", {
-        name: "Buscar perfume"
-      }),
-      "Rosa"
-    );
+     const user = userEvent.setup();
 
-    // COMPROBAR
-    expect(
-      screen.getByText("Rosa Floral")
-    ).toBeInTheDocument();
+     render(
+       <Productos onAgregarProducto={vi.fn()} />
+     );
 
-    expect(
-      screen.queryByText("Bosque Intenso")
-    ).not.toBeInTheDocument();
+     // Esperamos a que cargue el catálogo.
+     await screen.findByText("Rosa Floral");
 
-    expect(
-      screen.queryByText("Brisa")
-    ).not.toBeInTheDocument();
+     await user.type(
+       screen.getByRole("textbox", {
+         name: "Buscar perfume"
+       }),
+       "Rosa"
+     );
 
-  });
+     expect(
+       screen.getByText("Rosa Floral")
+     ).toBeInTheDocument();
 
+     expect(
+       screen.queryByText("Bosque Intenso")
+     ).not.toBeInTheDocument();
 
-  // =========================================
-  // PRUEBA 3: FILTRAR POR CATEGORÍA
-  // =========================================
+     expect(
+       screen.queryByText("Brisa")
+     ).not.toBeInTheDocument();
 
-  test("filtra productos por categoría", async () => {
+   });
 
-    // PREPARAR
-    const user = userEvent.setup();
 
-    render(
-      <Productos onAgregarProducto={vi.fn()} />
-    );
+   // =========================================
+   // PRUEBA 3: FILTRAR POR CATEGORÍA
+   // =========================================
 
-    // ACTUAR
-    await user.selectOptions(
-      screen.getByRole("combobox"),
-      "Hombre"
-    );
+   test("filtra productos por categoría", async () => {
 
-    // COMPROBAR
-    expect(
-      screen.getByText("Bosque Intenso")
-    ).toBeInTheDocument();
+     const user = userEvent.setup();
 
-    expect(
-      screen.queryByText("Rosa Floral")
-    ).not.toBeInTheDocument();
+     render(
+       <Productos onAgregarProducto={vi.fn()} />
+     );
 
-    expect(
-      screen.queryByText("Brisa")
-    ).not.toBeInTheDocument();
+     await screen.findByText("Rosa Floral");
 
-  });
+     await user.selectOptions(
+       screen.getByRole("combobox"),
+       "Hombre"
+     );
 
+     expect(
+       screen.getByText("Bosque Intenso")
+     ).toBeInTheDocument();
 
-  // =========================================
-  // PRUEBA 4: PRODUCTO NO ENCONTRADO
-  // =========================================
+     expect(
+       screen.queryByText("Rosa Floral")
+     ).not.toBeInTheDocument();
 
-  test("muestra mensaje cuando no encuentra productos", async () => {
+     expect(
+       screen.queryByText("Brisa")
+     ).not.toBeInTheDocument();
 
-    // PREPARAR
-    const user = userEvent.setup();
+   });
 
-    render(
-      <Productos onAgregarProducto={vi.fn()} />
-    );
 
-    // ACTUAR
-    await user.type(
-      screen.getByRole("textbox", {
-        name: "Buscar perfume"
-      }),
-      "Perfume inexistente"
-    );
+   // =========================================
+   // PRUEBA 4: PRODUCTO NO ENCONTRADO
+   // =========================================
 
-    // COMPROBAR
-    expect(
-      screen.getByText("No encontramos productos")
-    ).toBeInTheDocument();
+   test("muestra mensaje cuando no encuentra productos", async () => {
 
-    expect(
-      screen.getByText("Intenta buscar otro perfume.")
-    ).toBeInTheDocument();
+     const user = userEvent.setup();
 
-  });
+     render(
+       <Productos onAgregarProducto={vi.fn()} />
+     );
 
+     await screen.findByText("Rosa Floral");
 
-  // =========================================
-  // PRUEBA 5: AGREGAR AL CARRITO
-  // =========================================
+     await user.type(
+       screen.getByRole("textbox", {
+         name: "Buscar perfume"
+       }),
+       "Perfume inexistente"
+     );
 
-  test("ejecuta la función al agregar un producto", async () => {
+     expect(
+       screen.getByText("No encontramos productos")
+     ).toBeInTheDocument();
 
-    // PREPARAR
-    const user = userEvent.setup();
+     expect(
+       screen.getByText("Intenta buscar otro perfume.")
+     ).toBeInTheDocument();
 
-    const onAgregarProducto = vi.fn();
+   });
 
-    render(
-      <Productos onAgregarProducto={onAgregarProducto} />
-    );
 
-    // ACTUAR
-    await user.click(
-      screen.getByRole("button", {
-        name: "Agregar Rosa Floral"
-      })
-    );
+   // =========================================
+   // PRUEBA 5: AGREGAR AL CARRITO
+   // =========================================
 
-    // COMPROBAR
-    expect(
-      onAgregarProducto
-    ).toHaveBeenCalledWith(productosSimulados[0]);
+   test("ejecuta la función al agregar un producto", async () => {
 
-    expect(
-      screen.getByRole("status")
-    ).toHaveTextContent(
-      "Rosa Floral fue agregado al carrito."
-    );
+     const user = userEvent.setup();
 
-  });
+     const onAgregarProducto = vi.fn();
 
+     render(
+       <Productos onAgregarProducto={onAgregarProducto} />
+     );
 
-  // =========================================
-  // PRUEBA 6: CERRAR MENSAJE
-  // =========================================
+     await screen.findByText("Rosa Floral");
 
-  test("permite cerrar el mensaje de confirmación", async () => {
+     await user.click(
+       screen.getByRole("button", {
+         name: "Agregar Rosa Floral"
+       })
+     );
 
-    // PREPARAR
-    const user = userEvent.setup();
+     expect(onAgregarProducto).toHaveBeenCalledWith(
+       productosSimulados[0]
+     );
 
-    render(
-      <Productos onAgregarProducto={vi.fn()} />
-    );
+     expect(
+       screen.getByRole("status")
+     ).toHaveTextContent(
+       "Rosa Floral fue agregado al carrito."
+     );
 
-    // ACTUAR
-    await user.click(
-      screen.getByRole("button", {
-        name: "Agregar Brisa"
-      })
-    );
+   });
 
-    // COMPROBAR MENSAJE
-    expect(
-      screen.getByRole("status")
-    ).toBeInTheDocument();
 
-    // ACTUAR NUEVAMENTE
-    await user.click(
-      screen.getByRole("button", {
-        name: "Cerrar mensaje"
-      })
-    );
+   // =========================================
+   // PRUEBA 6: CERRAR MENSAJE
+   // =========================================
 
-    // COMPROBAR
-    expect(
-      screen.queryByRole("status")
-    ).not.toBeInTheDocument();
+   test("permite cerrar el mensaje de confirmación", async () => {
 
-  });
+     const user = userEvent.setup();
 
+     render(
+       <Productos onAgregarProducto={vi.fn()} />
+     );
 
-  // =========================================
-  // PRUEBA 7: CATÁLOGO VACÍO
-  // =========================================
+     await screen.findByText("Brisa");
 
-  test("muestra aviso cuando no existen productos", () => {
+     await user.click(
+       screen.getByRole("button", {
+         name: "Agregar Brisa"
+       })
+     );
 
-    // PREPARAR
-    vi.mocked(obtenerProductos).mockReturnValue([]);
+     expect(
+       screen.getByRole("status")
+     ).toHaveTextContent(
+       "Brisa fue agregado al carrito."
+     );
 
-    render(
-      <Productos onAgregarProducto={vi.fn()} />
-    );
+     await user.click(
+       screen.getByRole("button", {
+         name: "Cerrar mensaje"
+       })
+     );
 
-    // COMPROBAR
-    expect(
-      screen.getByText("No encontramos productos")
-    ).toBeInTheDocument();
+     expect(
+       screen.queryByRole("status")
+     ).not.toBeInTheDocument();
 
-  });
+   });
 
-});
+
+   // =========================================
+   // PRUEBA 7: CATÁLOGO VACÍO
+   // =========================================
+
+   test("muestra aviso cuando no existen productos", async () => {
+
+     // Spring Boot devuelve una lista vacía.
+     vi.mocked(obtenerProductosApi)
+       .mockResolvedValue([]);
+
+     render(
+       <Productos onAgregarProducto={vi.fn()} />
+     );
+
+     expect(
+       await screen.findByText("No encontramos productos")
+     ).toBeInTheDocument();
+
+     expect(
+       screen.getByText("Intenta buscar otro perfume.")
+     ).toBeInTheDocument();
+
+   });
+
+
+   // =========================================
+   // PRUEBA 8: PRODUCTO SIN STOCK
+   // =========================================
+
+   test("impide agregar un producto sin stock", async () => {
+
+     const user = userEvent.setup();
+     const onAgregarProducto = vi.fn();
+
+     // Simulamos un perfume agotado.
+     vi.mocked(obtenerProductosApi)
+       .mockResolvedValue([
+         {
+           id: 4,
+           nombre: "Perfume Agotado",
+           categoria: "Unisex",
+           precio: 25990,
+           stock: 0
+         }
+       ]);
+
+     render(
+       <Productos onAgregarProducto={onAgregarProducto} />
+     );
+
+     await screen.findByText("Perfume Agotado");
+
+     await user.click(
+       screen.getByRole("button", {
+         name: "Agregar Perfume Agotado"
+       })
+     );
+
+     // No debe llegar al carrito.
+     expect(onAgregarProducto).not.toHaveBeenCalled();
+
+     expect(
+       screen.getByRole("status")
+     ).toHaveTextContent(
+       "Perfume Agotado no tiene stock disponible."
+     );
+
+   });
+
+
+   // =========================================
+   // PRUEBA 9: ERROR DE CONEXIÓN
+   // =========================================
+
+   test("muestra un error cuando Spring Boot no responde", async () => {
+
+     // Evitamos mostrar el error esperado en la terminal.
+     const errorConsola = vi.spyOn(
+       console,
+       "error"
+     ).mockImplementation(() => {});
+
+     vi.mocked(obtenerProductosApi)
+       .mockRejectedValue(
+         new Error("No se pudo conectar con Spring Boot")
+       );
+
+     render(
+       <Productos onAgregarProducto={vi.fn()} />
+     );
+
+     expect(
+       await screen.findByRole("alert")
+     ).toHaveTextContent(
+       "No fue posible cargar los perfumes."
+     );
+
+     expect(
+       screen.queryByText("No encontramos productos")
+     ).not.toBeInTheDocument();
+
+     expect(errorConsola).toHaveBeenCalled();
+
+   });
+
+ });
