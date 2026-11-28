@@ -1,9 +1,10 @@
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
-import { usuariosDemo } from '../data/usuariosDemo'
+import { iniciarSesion } from '../services/api.js'
+import { guardarSesion } from '../services/sesion.js'
 
-export default function LoginForm({ onLogin }) {
+export default function LoginForm({ onLogin, volverAlCarrito }) {
 
   // ESTADOS DEL FORMULARIO
   const [correo, setCorreo] = useState('')
@@ -18,6 +19,7 @@ export default function LoginForm({ onLogin }) {
   const [contrasenaValidada, setContrasenaValidada] = useState(false)
 
   // MENSAJES DEL LOGIN
+  const [enviando, setEnviando] = useState(false)
   const [mensajeLogin, setMensajeLogin] = useState('')
   const [tipoMensaje, setTipoMensaje] = useState('')
 
@@ -36,10 +38,10 @@ export default function LoginForm({ onLogin }) {
       }
     }
 
-    if (correoLimpio.length > 100) {
+    if (correoLimpio.length > 150) {
       return {
         valido: false,
-        mensaje: 'El correo no puede superar los 100 caracteres.'
+        mensaje: 'El correo no puede superar los 150 caracteres.'
       }
     }
 
@@ -49,23 +51,6 @@ export default function LoginForm({ onLogin }) {
       return {
         valido: false,
         mensaje: 'Ingresa un correo electrónico válido.'
-      }
-    }
-
-    const dominiosPermitidos = [
-      '@duoc.cl',
-      '@profesor.duoc.cl',
-      '@gmail.com'
-    ]
-
-    const dominioValido = dominiosPermitidos.some(
-      dominio => correoLimpio.endsWith(dominio)
-    )
-
-    if (!dominioValido) {
-      return {
-        valido: false,
-        mensaje: 'Solo se permiten correos @duoc.cl, @profesor.duoc.cl o @gmail.com.'
       }
     }
 
@@ -82,20 +67,6 @@ export default function LoginForm({ onLogin }) {
       return {
         valido: false,
         mensaje: 'La contraseña es obligatoria.'
-      }
-    }
-
-    if (contrasenaValor.length < 4) {
-      return {
-        valido: false,
-        mensaje: 'La contraseña debe tener al menos 4 caracteres.'
-      }
-    }
-
-    if (contrasenaValor.length > 10) {
-      return {
-        valido: false,
-        mensaje: 'La contraseña no puede superar los 10 caracteres.'
       }
     }
 
@@ -124,9 +95,10 @@ export default function LoginForm({ onLogin }) {
   }
 
   // PROCESAR INICIO DE SESIÓN
-  function manejarEnvio(evento) {
+  async function manejarEnvio(evento) {
 
     evento.preventDefault()
+    if (enviando) return
 
     setMensajeLogin('')
     setTipoMensaje('')
@@ -145,65 +117,27 @@ export default function LoginForm({ onLogin }) {
       return
     }
 
-    const correoLogin = correo.trim().toLowerCase()
-    const contrasenaLogin = contrasena
-
-    // BUSCAR USUARIO DE DEMOSTRACIÓN
-    const usuarioEncontrado = usuariosDemo.find(
-      usuario => usuario.correo.toLowerCase() === correoLogin
-    )
-
-    // COMPROBAR CREDENCIALES
-    if (
-      !usuarioEncontrado ||
-      usuarioEncontrado.contrasena !== contrasenaLogin
-    ) {
+    setEnviando(true)
+    try {
+      const { id, nombre, correo: correoUsuario, rol, token } = await iniciarSesion({
+        correo: correo.trim().toLowerCase(), password: contrasena
+      })
+      if (!token || !['ADMINISTRADOR', 'VENDEDOR', 'CLIENTE'].includes(rol)) throw new Error('Sesión inválida')
+      const usuario = { id, nombre, correo: correoUsuario, rol, token }
+      guardarSesion(usuario)
+      onLogin?.(usuario)
+      const inicioPorRol = { ADMINISTRADOR: '/admin', VENDEDOR: '/pedidos', CLIENTE: '/productos' }
+      const destino = volverAlCarrito && rol !== 'VENDEDOR' ? '/carrito' : inicioPorRol[rol]
+      navigate(destino)
+    } catch (error) {
+      const estado = error.response?.status
       setTipoMensaje('danger')
-      setMensajeLogin('Correo o contraseña incorrectos.')
-      return
+      setMensajeLogin(estado === 401 ? 'Correo o contraseña incorrectos.'
+        : estado === 403 ? 'Esta cuenta no está habilitada.'
+          : 'No se pudo iniciar sesión. Vuelve a intentarlo.')
+    } finally {
+      setEnviando(false)
     }
-
-    // INGRESO ADMINISTRADOR
-    if (usuarioEncontrado.rol === 'Administrador') {
-
-      // ELIMINAR SESIÓN DEL CLIENTE ANTERIOR
-      localStorage.removeItem('clienteActivo')
-
-      // ACTUALIZAR ESTADO EN APP.JSX
-      onLogin?.(null)
-
-      // GUARDAR SESIÓN ADMINISTRATIVA
-      sessionStorage.setItem('adminActivo', 'true')
-
-      setTipoMensaje('success')
-      setMensajeLogin('Ingreso administrador correcto.')
-
-      navigate('/admin')
-      return
-    }
-
-    // INGRESO CLIENTE
-    const cliente = {
-      nombre: usuarioEncontrado.nombre,
-      correo: usuarioEncontrado.correo
-    }
-
-    // GUARDAR SESIÓN DEL CLIENTE
-    localStorage.setItem(
-      'clienteActivo',
-      JSON.stringify(cliente)
-    )
-
-    // LIMPIAR SESIÓN ADMINISTRATIVA ANTERIOR
-    sessionStorage.removeItem('adminActivo')
-
-    // INFORMAR A APP.JSX DEL USUARIO CONECTADO
-    onLogin?.(cliente)
-
-    setTipoMensaje('success')
-    setMensajeLogin('Ingreso cliente correcto.')
-
-    navigate('/productos')
   }
 
   return (
@@ -228,7 +162,7 @@ export default function LoginForm({ onLogin }) {
           }`}
           placeholder="ejemplo@gmail.com"
           value={correo}
-          maxLength={100}
+          maxLength={150}
           onChange={(evento) => {
             setCorreo(evento.target.value)
             setCorreoValidado(false)
@@ -242,10 +176,6 @@ export default function LoginForm({ onLogin }) {
           {errorCorreo}
         </div>
 
-        <small className="form-text text-muted">
-          Puedes utilizar correos @duoc.cl,
-          @profesor.duoc.cl o @gmail.com.
-        </small>
 
       </div>
 
@@ -281,9 +211,6 @@ export default function LoginForm({ onLogin }) {
           {errorContrasena}
         </div>
 
-        <small className="form-text text-muted">
-          La contraseña debe contener entre 4 y 10 caracteres.
-        </small>
 
       </div>
 
@@ -322,6 +249,7 @@ export default function LoginForm({ onLogin }) {
       {/* BOTÓN INICIAR SESIÓN */}
       <button
         type="submit"
+        disabled={enviando}
         className="btn btn-perfulandia w-100"
       >
         Iniciar sesión

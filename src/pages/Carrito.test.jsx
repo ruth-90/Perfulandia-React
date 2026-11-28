@@ -30,15 +30,15 @@ import { MemoryRouter } from "react-router";
 import Carrito from "./Carrito.jsx";
 
 // SERVICIO DE PRODUCTOS
-import { obtenerProductoPorId } from "../services/productosStorage.js";
+import { crearPedido } from "../services/api.js";
 
 
 // =============================================
 // SIMULAR CONSULTA DE INVENTARIO
 // =============================================
 
-vi.mock("../services/productosStorage.js", () => ({
-    obtenerProductoPorId: vi.fn()
+vi.mock("../services/api.js", () => ({
+    crearPedido: vi.fn()
 }));
 
 
@@ -72,6 +72,7 @@ function renderizarCarrito(productos = [productoSimulado]) {
         <MemoryRouter>
             <Carrito
                 carrito={productos}
+                usuarioActivo={{ rol: "CLIENTE" }}
                 {...funciones}
             />
         </MemoryRouter>
@@ -135,13 +136,6 @@ describe("Carrito de Compras - Perfulandia", () => {
     beforeEach(() => {
 
         vi.clearAllMocks();
-
-        // Simular producto disponible en inventario
-        vi.mocked(obtenerProductoPorId)
-            .mockReturnValue({
-                id: 1,
-                stock: 5
-            });
 
     });
 
@@ -431,7 +425,7 @@ describe("Carrito de Compras - Perfulandia", () => {
         const funciones = renderizarCarrito();
 
         const botonPagar = screen.getByRole("button", {
-            name: /Pagar ahora/i
+            name: /Enviar pedido/i
         });
 
         // ACTUAR
@@ -457,90 +451,26 @@ describe("Carrito de Compras - Perfulandia", () => {
     // PRUEBA 11: PRODUCTO SIN STOCK
     // =========================================
 
-    test("impide comprar un producto agotado", async () => {
-
-        // PREPARAR
-        vi.mocked(obtenerProductoPorId)
-            .mockReturnValue({
-                id: 1,
-                stock: 0
-            });
-
-        const user = userEvent.setup();
-
-        const funciones = renderizarCarrito();
-
-        await completarFormulario(user);
-
-        // ACTUAR
-        await user.click(
-            screen.getByRole("button", {
-                name: /Pagar ahora/i
-            })
-        );
-
-        // COMPROBAR
-        expect(
-            screen.getByRole("alert")
-        ).toHaveTextContent(/se ha agotado/i);
-
-        expect(
-            funciones.onVaciarCarrito
-        ).not.toHaveBeenCalled();
-
-    });
-
-
-    // =========================================
-    // PRUEBA 12: CANTIDAD SUPERA STOCK
-    // =========================================
-
-    test("impide comprar más unidades que las disponibles", async () => {
-
-        // PREPARAR
-        vi.mocked(obtenerProductoPorId)
-            .mockReturnValue({
-                id: 1,
-                stock: 2
-            });
-
-        const producto = {
-            ...productoSimulado,
-            cantidad: 3
-        };
-
-        const user = userEvent.setup();
-
-        const funciones = renderizarCarrito([producto]);
-
-        await completarFormulario(user);
-
-        // ACTUAR
-        await user.click(
-            screen.getByRole("button", {
-                name: /Pagar ahora/i
-            })
-        );
-
-        // COMPROBAR
-        expect(
-            screen.getByRole("alert")
-        ).toHaveTextContent(
-            "supera el stock disponible (2 un.)"
-        );
-
-        expect(
-            funciones.onVaciarCarrito
-        ).not.toHaveBeenCalled();
-
-    });
-
-
-    // =========================================
-    // PRUEBA 13: COMPRA EXITOSA
-    // =========================================
+    test.each([[404, /ya no está disponible/i], [409, /cambió el stock/i]])(
+        "conserva el carrito cuando el backend responde %s", async (status, mensaje) => {
+            crearPedido.mockRejectedValue({ response: { status } });
+            const user = userEvent.setup();
+            const funciones = renderizarCarrito();
+            await completarFormulario(user);
+            await user.click(screen.getByRole("button", { name: /Enviar pedido/i }));
+            expect(await screen.findByRole("alert")).toHaveTextContent(mensaje);
+            expect(funciones.onVaciarCarrito).not.toHaveBeenCalled();
+        }
+    );
 
     test("genera una orden cuando la compra es válida", async () => {
+        crearPedido.mockResolvedValue({
+            id: 74, estado: "PENDIENTE",
+            entrega: { nombre: "Maria Perez", correo: "maria@gmail.com" },
+            metodoPago: "Transferencia Electrónica",
+            items: [{ productoId: 1, nombre: "Rosa Floral", cantidad: 1, subtotal: 20500 }],
+            subtotal: 20500, costoEnvio: 3990, total: 24490
+        });
 
         // PREPARAR
         const user = userEvent.setup();
@@ -552,20 +482,25 @@ describe("Carrito de Compras - Perfulandia", () => {
         // ACTUAR
         await user.click(
             screen.getByRole("button", {
-                name: /Pagar ahora/i
+                name: /Enviar pedido/i
             })
         );
 
         // COMPROBAR
         expect(
             screen.getByRole("heading", {
-                name: /Se ha realizado la compra con éxito/i
+                name: /Pedido recibido/i
             })
         ).toBeInTheDocument();
 
         expect(
-            screen.getByText(/Código de orden: #ORDER-/i)
+            screen.getByText(/Código de orden: #74/i)
         ).toBeInTheDocument();
+
+        expect(crearPedido).toHaveBeenCalledWith(expect.objectContaining({
+            items: [{ productoId: 1, cantidad: 1 }], metodoPago: "Transferencia Electrónica"
+        }));
+        expect(screen.getByText("PENDIENTE")).toBeInTheDocument();
 
         // COMPROBAR QUE SE SOLICITA VACIAR EL CARRITO
         expect(

@@ -1,6 +1,7 @@
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
+import { registrarUsuario } from '../services/api.js'
 
 import { regionesComunas, formatearFecha, validarFechaNacimiento } from '../data/usuariosConfig.js'
 
@@ -22,6 +23,7 @@ export default function RegistroForm() {
   const [errores, setErrores] = useState({})
   const [validados, setValidados] = useState({})
   const [mostrarPasswords, setMostrarPasswords] = useState(false)
+  const [enviando, setEnviando] = useState(false)
   const [mensaje, setMensaje] = useState('')
 
   const navigate = useNavigate()
@@ -35,19 +37,6 @@ export default function RegistroForm() {
   )
 
   const fechaMaxima = formatearFecha(fechaLimite)
-
-  // LEER LOS USUARIOS DE DEMOSTRACIÓN
-  function obtenerUsuarios() {
-    try {
-      const guardados = JSON.parse(
-        localStorage.getItem('usuarios') || '[]'
-      )
-
-      return Array.isArray(guardados) ? guardados : []
-    } catch {
-      return []
-    }
-  }
 
   // VALIDAR CADA CAMPO
   function validarCampo(campo, valores = datos) {
@@ -81,12 +70,6 @@ export default function RegistroForm() {
           return 'Ingrese el RUN sin puntos ni guion.'
         }
 
-        const repetido = obtenerUsuarios().some(
-          usuario => usuario.rut === rut
-        )
-
-        if (repetido) return 'Este RUN ya está registrado.'
-
         return ''
       }
 
@@ -100,24 +83,14 @@ export default function RegistroForm() {
           return 'El correo electrónico es obligatorio.'
         }
 
-        if (correo.length > 100) {
-          return 'El correo no puede superar los 100 caracteres.'
+        if (correo.length > 150) {
+          return 'El correo no puede superar los 150 caracteres.'
         }
 
         const formato = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
         if (!formato.test(correo)) {
           return 'Ingresa un correo electrónico válido.'
-        }
-
-        const dominios = [
-          '@duoc.cl',
-          '@profesor.duoc.cl',
-          '@gmail.com'
-        ]
-
-        if (!dominios.some(dominio => correo.endsWith(dominio))) {
-          return 'Solo se permiten correos @duoc.cl, @profesor.duoc.cl o @gmail.com.'
         }
 
         return ''
@@ -136,8 +109,8 @@ export default function RegistroForm() {
       case 'direccion':
         if (!valor.trim()) return 'La dirección es obligatoria.'
 
-        if (valor.trim().length > 300) {
-          return 'La dirección no puede superar los 300 caracteres.'
+        if (valor.trim().length > 255) {
+          return 'La dirección no puede superar los 255 caracteres.'
         }
 
         return ''
@@ -145,12 +118,12 @@ export default function RegistroForm() {
       case 'password':
         if (!valor) return 'La contraseña es obligatoria.'
 
-        if (valor.length < 4) {
-          return 'La contraseña debe tener al menos 4 caracteres.'
+        if (valor.length < 8) {
+          return 'La contraseña debe tener al menos 8 caracteres.'
         }
 
-        if (valor.length > 10) {
-          return 'La contraseña no puede superar los 10 caracteres.'
+        if (new TextEncoder().encode(valor).length > 72) {
+          return 'La contraseña no puede superar los 72 bytes.'
         }
 
         return ''
@@ -220,8 +193,9 @@ export default function RegistroForm() {
   }
 
   // ENVIAR EL REGISTRO
-  function manejarEnvio(evento) {
+  async function manejarEnvio(evento) {
     evento.preventDefault()
+    if (enviando) return
     setMensaje('')
 
     const nuevosErrores = {}
@@ -244,33 +218,28 @@ export default function RegistroForm() {
       return
     }
 
-    // GUARDAR DATOS DE DEMOSTRACIÓN
-    // NO guardamos la contraseña.
-    const nuevoUsuario = {
-      rut: datos.rut.trim().toUpperCase(),
-      nombre: datos.nombre.trim(),
-      apellidos: datos.apellidos.trim(),
-      fechaNacimiento: datos.fechaNacimiento,
-      correo: datos.correo.trim().toLowerCase(),
-      tipoUsuario: 'Cliente',
-      region: datos.region,
-      comuna: datos.comuna,
-      direccion: datos.direccion.trim()
+    const rut = datos.rut.trim().toUpperCase()
+    setEnviando(true)
+    try {
+      await registrarUsuario({
+        rut: rut.slice(0, -1) + '-' + rut.slice(-1),
+        nombre: datos.nombre.trim(),
+        apellidos: datos.apellidos.trim(),
+        fechaNacimiento: datos.fechaNacimiento,
+        correo: datos.correo.trim().toLowerCase(),
+        region: datos.region,
+        comuna: datos.comuna,
+        direccion: datos.direccion.trim(),
+        password: datos.password
+      })
+      navigate('/login', { state: { registroExitoso: true } })
+    } catch (error) {
+      const respuesta = error.response?.data
+      if (respuesta?.errores) setErrores(anterior => ({ ...anterior, ...respuesta.errores }))
+      setMensaje(respuesta?.mensaje || 'No se pudo crear la cuenta. Vuelve a intentarlo.')
+    } finally {
+      setEnviando(false)
     }
-
-    const usuarios = obtenerUsuarios()
-
-    usuarios.push(nuevoUsuario)
-
-    localStorage.setItem('usuarios', JSON.stringify(usuarios))
-
-    // Por ahora no iniciamos sesión automáticamente.
-    setMensaje('Cuenta de demostración creada correctamente.')
-
-    // Volver al login
-    navigate('/login', {
-      state: { registroExitoso: true }
-    })
   }
 
   // CAMPOS DE TEXTO DEL FORMULARIO
@@ -375,17 +344,13 @@ export default function RegistroForm() {
           name="correo"
           className={claseCampo('correo')}
           placeholder="ejemplo@gmail.com"
-          maxLength={100}
+          maxLength={150}
           autoComplete="email"
           value={datos.correo}
           onChange={manejarCambio}
           onBlur={manejarBlur}
         />
 
-        <div className="form-text">
-          Correos permitidos: @duoc.cl, @profesor.duoc.cl
-          o @gmail.com.
-        </div>
 
         {errores.correo && (
           <div className="text-danger small mt-1">
@@ -471,7 +436,7 @@ export default function RegistroForm() {
           name="direccion"
           className={claseCampo('direccion')}
           placeholder="Ingresa tu dirección"
-          maxLength={300}
+          maxLength={255}
           autoComplete="street-address"
           value={datos.direccion}
           onChange={manejarCambio}
@@ -504,7 +469,7 @@ export default function RegistroForm() {
         />
 
         <div className="form-text">
-          Debe contener entre 4 y 10 caracteres.
+          Usa al menos 8 caracteres y un máximo de 72 bytes.
         </div>
 
         {errores.password && (
@@ -570,6 +535,7 @@ export default function RegistroForm() {
       <div className="d-grid">
         <button
           type="submit"
+          disabled={enviando}
           className="btn btn-perfulandia"
         >
           Crear cuenta

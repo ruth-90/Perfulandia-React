@@ -1,13 +1,13 @@
 import { NavLink, Link, useNavigate } from 'react-router'
+import { guardarSesion } from '../services/sesion.js'
 
-export default function AdminSidebar({ paginaActiva = 'inicio' }) {
+export default function AdminSidebar() {
   const navigate = useNavigate()
 
   // CERRAR SESIÓN DEL ADMINISTRADOR
   function cerrarSesion() {
 
-    // Eliminar la sesión de demostración
-    sessionStorage.removeItem('adminActivo')
+    guardarSesion(null)
 
     // Regresar al Login
     navigate('/login', { replace: true })
@@ -28,6 +28,7 @@ export default function AdminSidebar({ paginaActiva = 'inicio' }) {
 
       {/* MENÚ DE NAVEGACIÓN */}
       <nav className="admin-menu">
+        <NavLink className="d-block px-3 py-2" to="/pedidos">Pedidos</NavLink>
         {/* INICIO / DASHBOARD */}
         <NavLink
           to="/admin"

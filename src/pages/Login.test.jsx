@@ -10,6 +10,7 @@ import { describe, test, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 // Importamos la página que vamos a probar
+import { MemoryRouter } from "react-router";
 import Login from "./Login.jsx";
 
 // Simulamos LoginForm para probar solamente Login
@@ -31,7 +32,7 @@ describe("Página Login - Perfulandia", () => {
     test("muestra el mensaje de inicio de sesión", () => {
 
         // PREPARAR
-        render(<Login />);
+        render(<MemoryRouter><Login /></MemoryRouter>);
 
         // COMPROBAR
         expect(
@@ -45,7 +46,7 @@ describe("Página Login - Perfulandia", () => {
     test("muestra el logo de Perfulandia", () => {
 
         // PREPARAR
-        render(<Login />);
+        render(<MemoryRouter><Login /></MemoryRouter>);
 
         // COMPROBAR
         const logo = screen.getByRole("img", {
@@ -66,7 +67,7 @@ describe("Página Login - Perfulandia", () => {
     test("incluye el componente LoginForm", () => {
 
         // PREPARAR
-        render(<Login />);
+        render(<MemoryRouter><Login /></MemoryRouter>);
 
         // COMPROBAR
         expect(
@@ -80,7 +81,7 @@ describe("Página Login - Perfulandia", () => {
     test("muestra el enlace para crear una cuenta", () => {
 
         // PREPARAR
-        render(<Login />);
+        render(<MemoryRouter><Login /></MemoryRouter>);
 
         // COMPROBAR
         const enlace = screen.getByRole("link", {

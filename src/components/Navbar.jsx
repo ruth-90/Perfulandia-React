@@ -14,13 +14,12 @@ export default function Navbar({
   // COMPROBAR SI EL ADMINISTRADOR TIENE SESIÓN
   // ==========================================
   const adminActivo =
-    sessionStorage.getItem('adminActivo') === 'true'
+    usuarioActivo?.rol === 'ADMINISTRADOR'
 
   // ==========================================
   // CERRAR SESIÓN DEL CLIENTE
   // ==========================================
   function cerrarSesionCliente() {
-    localStorage.removeItem('clienteActivo')
     onCerrarSesion?.()
     navigate('/')
   }
@@ -29,7 +28,7 @@ export default function Navbar({
   // CERRAR SESIÓN DEL ADMINISTRADOR
   // ==========================================
   function cerrarSesionAdmin() {
-    sessionStorage.removeItem('adminActivo')
+    onCerrarSesion?.()
     navigate('/login', { replace: true })
   }
 
@@ -209,6 +208,7 @@ export default function Navbar({
                       <li>
                         <hr className="dropdown-divider" />
                       </li>
+                      <li><NavLink to="/pedidos" className="dropdown-item">{usuarioActivo?.rol === 'CLIENTE' ? 'Mis pedidos' : 'Pedidos'}</NavLink></li>
 
                       <li>
                         <button
@@ -251,6 +251,7 @@ export default function Navbar({
                       <li>
                         <hr className="dropdown-divider" />
                       </li>
+                      <li><NavLink to="/pedidos" className="dropdown-item">{usuarioActivo?.rol === 'CLIENTE' ? 'Mis pedidos' : 'Pedidos'}</NavLink></li>
 
                       <li>
                         <button

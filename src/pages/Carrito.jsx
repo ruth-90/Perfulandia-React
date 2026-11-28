@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router'
-import { obtenerProductoPorId } from '../services/productosStorage.js'
+import { crearPedido } from '../services/api.js'
+import { guardarSesion } from '../services/sesion.js'
 
 // Regiones y comunas para despacho en Chile
 const regionesComunas = {
@@ -19,25 +20,21 @@ export default function Carrito({
   usuarioActivo
 }) {
   // VERIFICAR SI EL CLIENTE INICIÓ SESIÓN
-  const clienteConectado = Boolean(usuarioActivo)
+  const clienteConectado = ['CLIENTE', 'ADMINISTRADOR'].includes(usuarioActivo?.rol)
 
   // Estados para formulario de Checkout
-  const [nombre, setNombre] = useState(usuarioActivo?.nombre || '')
-  const [correo, setCorreo] = useState(usuarioActivo?.correo || '')
+  const [nombreEditado, setNombre] = useState(null)
+  const [correoEditado, setCorreo] = useState(null)
+  const nombre = nombreEditado ?? usuarioActivo?.nombre ?? ''
+  const correo = correoEditado ?? usuarioActivo?.correo ?? ''
   const [telefono, setTelefono] = useState('')
   const [region, setRegion] = useState('')
   const [comuna, setComuna] = useState('')
   const [direccion, setDireccion] = useState('')
   const [metodoPago, setMetodoPago] = useState('')
+  const [enviando, setEnviando] = useState(false)
   const [errorValidacion, setErrorValidacion] = useState('')
 
-  // ACTUALIZAR DATOS CUANDO CAMBIA EL CLIENTE
-  useEffect(() => {
-    setNombre(usuarioActivo?.nombre || '')
-    setCorreo(usuarioActivo?.correo || '')
-  }, [usuarioActivo])
-
-  // Estado para simulación de compra exitosa (según figura de la pauta)
   const [ordenCompra, setOrdenCompra] = useState(null)
 
   // Cálculos de totales
@@ -61,8 +58,13 @@ export default function Carrito({
   }
 
   // Procesar finalización de compra
-  function handleFinalizarCompra(e) {
+  async function handleFinalizarCompra(e) {
     e.preventDefault()
+    if (enviando) return
+    if (!clienteConectado) {
+      setErrorValidacion(usuarioActivo ? 'Tu rol no permite crear pedidos.' : 'Inicia sesión para realizar el pedido.')
+      return
+    }
 
     if (carrito.length === 0) {
       setErrorValidacion('El carrito está vacío.')
@@ -74,45 +76,30 @@ export default function Carrito({
       return
     }
 
-    // Validar si algún producto supera el stock disponible en bodega
-    for (const item of carrito) {
-      const prodBd = obtenerProductoPorId(item.id)
-      const stockDisponible = prodBd ? Number(prodBd.stock ?? 0) : Number(item.stock ?? 99)
-
-      if (stockDisponible <= 0) {
-        setErrorValidacion(`Lo sentimos, "${item.nombre}" se ha agotado. Por favor elimínalo del carrito para continuar.`)
-        return
-      }
-
-      if (item.cantidad > stockDisponible) {
-        setErrorValidacion(`"${item.nombre}" supera el stock disponible (${stockDisponible} un.). Por favor reduce la cantidad.`)
-        return
-      }
-    }
-
     setErrorValidacion('')
-
-    // Generar orden exitosa con datos de la compra
-    const nuevaOrden = {
-      codigo: `ORDER-${Date.now().toString().slice(-6)}`,
-      fecha: new Date().toLocaleDateString('es-CL'),
-      cliente: {
-        nombre,
-        correo,
-        telefono,
-        region,
-        comuna,
-        direccion,
+    setEnviando(true)
+    try {
+      const pedido = await crearPedido({
+        items: carrito.map(({ id, cantidad }) => ({ productoId: id, cantidad })),
+        entrega: { nombre: nombre.trim(), correo: correo.trim(), telefono: telefono.trim(), region, comuna, direccion: direccion.trim() },
         metodoPago
-      },
-      items: [...carrito],
-      subtotal,
-      costoEnvio,
-      total
+      })
+      setOrdenCompra(pedido)
+      onVaciarCarrito()
+    } catch (error) {
+      const estado = error.response?.status
+      if (estado === 401) guardarSesion(null)
+      const mensajes = {
+        400: 'Revisa las cantidades y los datos de entrega.',
+        401: 'Tu sesión venció. Inicia sesión para volver a intentarlo.',
+        403: 'Tu rol no permite crear pedidos.',
+        404: 'Un producto del carrito ya no está disponible.',
+        409: 'Cambió el stock disponible. Revisa las cantidades de tu carrito.'
+      }
+      setErrorValidacion(mensajes[estado] || 'No se pudo comprobar el pedido. Conservamos tu carrito.')
+    } finally {
+      setEnviando(false)
     }
-
-    setOrdenCompra(nuevaOrden)
-    onVaciarCarrito()
   }
 
   // VISTA 1: COMPRA EXITOSA (Figura 7 de la pauta de Duoc UC)
@@ -135,10 +122,10 @@ export default function Carrito({
               >
                 <i className="bi bi-check-circle-fill"></i>
               </div>
-              <p className="text-muted mb-1">Código de orden: #{ordenCompra.codigo}</p>
-              <h1 className="h2 fw-bold">¡Se ha realizado la compra con éxito!</h1>
+              <p className="text-muted mb-1">Código de orden: #{ordenCompra.id}</p>
+              <h1 className="h2 fw-bold">Pedido recibido</h1>
               <p className="text-secondary">
-                Enviamos el comprobante y detalle de despacho a <strong>{ordenCompra.cliente.correo}</strong>.
+                Estado del pedido: <strong>{ordenCompra.estado}</strong>.
               </p>
             </div>
 
@@ -148,19 +135,19 @@ export default function Carrito({
               <h2 className="h5 fw-bold mb-3">Datos de despacho</h2>
               <div className="row g-2 text-secondary">
                 <div className="col-sm-6">
-                  <strong>Nombre:</strong> {ordenCompra.cliente.nombre}
+                  <strong>Nombre:</strong> {ordenCompra.entrega.nombre}
                 </div>
                 <div className="col-sm-6">
-                  <strong>Teléfono:</strong> {ordenCompra.cliente.telefono}
+                  <strong>Teléfono:</strong> {ordenCompra.entrega.telefono}
                 </div>
                 <div className="col-sm-6">
-                  <strong>Comuna / Región:</strong> {ordenCompra.cliente.comuna}, {ordenCompra.cliente.region}
+                  <strong>Comuna / Región:</strong> {ordenCompra.entrega.comuna}, {ordenCompra.entrega.region}
                 </div>
                 <div className="col-sm-6">
-                  <strong>Dirección:</strong> {ordenCompra.cliente.direccion}
+                  <strong>Dirección:</strong> {ordenCompra.entrega.direccion}
                 </div>
                 <div className="col-12">
-                  <strong>Método de pago:</strong> {ordenCompra.cliente.metodoPago}
+                  <strong>Método de pago:</strong> {ordenCompra.metodoPago}
                 </div>
               </div>
             </div>
@@ -169,12 +156,12 @@ export default function Carrito({
               <h2 className="h5 fw-bold mb-3">Resumen de fragancias</h2>
               <ul className="list-group list-group-flush mb-3">
                 {ordenCompra.items.map((item) => (
-                  <li key={item.id} className="list-group-item d-flex justify-content-between align-items-center px-0">
+                  <li key={item.productoId} className="list-group-item d-flex justify-content-between align-items-center px-0">
                     <div>
                       <strong>{item.nombre}</strong>
                       <span className="text-muted ms-2">x{item.cantidad}</span>
                     </div>
-                    <span>{formatearPrecio(item.precio * item.cantidad)}</span>
+                    <span>{formatearPrecio(item.subtotal)}</span>
                   </li>
                 ))}
               </ul>
@@ -238,8 +225,7 @@ export default function Carrito({
             {/* LISTA DE ITEMS */}
             <div className="carrito-lista mb-4">
               {carrito.map((producto) => {
-                const prodBd = obtenerProductoPorId(producto.id)
-                const stockDisponible = prodBd ? Number(prodBd.stock ?? 0) : Number(producto.stock ?? 99)
+                const stockDisponible = Number(producto.stock ?? 0)
                 const alcanzoTope = producto.cantidad >= stockDisponible
                 const sinStock = stockDisponible <= 0
 
@@ -267,7 +253,7 @@ export default function Carrito({
                     <div className="carrito-cantidad">
                       <button
                         type="button"
-                        onClick={() => onModificarCantidad(producto.id, -1)}
+                        onClick={() => onModificarCantidad(producto.id, -1)} disabled={enviando}
                         aria-label="Disminuir cantidad"
                       >
                         <i className="bi bi-dash"></i>
@@ -277,7 +263,7 @@ export default function Carrito({
                         type="button"
                         onClick={() => onModificarCantidad(producto.id, 1)}
                         aria-label="Aumentar cantidad"
-                        disabled={alcanzoTope}
+                        disabled={enviando || alcanzoTope}
                         title={alcanzoTope ? `Stock máximo (${stockDisponible}) alcanzado` : 'Aumentar cantidad'}
                       >
                         <i className="bi bi-plus"></i>
@@ -291,7 +277,7 @@ export default function Carrito({
                     <button
                       type="button"
                       className="carrito-eliminar"
-                      onClick={() => onEliminarProducto(producto.id)}
+                      onClick={() => onEliminarProducto(producto.id)} disabled={enviando}
                       aria-label="Eliminar producto"
                     >
                       <i className="bi bi-trash"></i>
@@ -313,11 +299,16 @@ export default function Carrito({
                   alt="Logo Perfulandia"
                   style={{ width: '130px', margin: '0 auto 12px' }}
                 />
-                <p className="section-subtitulo mb-1">Paso de Pago</p>
+                <p className="section-subtitulo mb-1">Datos del pedido</p>
                 <h2 className="h4 fw-bold">Información de Entrega y Facturación</h2>
               </div>
 
-              {/* INFORMACIÓN DEL CLIENTE CONECTADO */}
+              {!usuarioActivo && (
+                <p className="alert alert-info">
+                  <Link to="/login" state={{ volverAlCarrito: true }}>Inicia sesión</Link> para enviar tu pedido.
+                </p>
+              )}
+
               {clienteConectado && (
                 <div className="alert alert-success mb-4">
                   <i className="bi bi-person-check-fill me-2"></i>
@@ -464,8 +455,8 @@ export default function Carrito({
               </div>
 
               <div className="mt-4 pt-2">
-                <button type="submit" className="btn btn-perfulandia w-100 py-3 fw-semibold">
-                  <i className="bi bi-lock-fill me-2"></i> Pagar ahora {formatearPrecio(total)}
+                <button type="submit" disabled={enviando} className="btn btn-perfulandia w-100 py-3 fw-semibold">
+                  <i className="bi bi-lock-fill me-2"></i> {enviando ? 'Enviando pedido…' : 'Enviar pedido'}
                 </button>
               </div>
             </form>
@@ -509,7 +500,7 @@ export default function Carrito({
               <button
                 type="button"
                 className="btn btn-outline-danger w-100 py-2"
-                onClick={onVaciarCarrito}
+                onClick={onVaciarCarrito} disabled={enviando}
               >
                 <i className="bi bi-trash3 me-1"></i> Vaciar Carrito
               </button>

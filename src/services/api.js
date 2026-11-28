@@ -1,22 +1,27 @@
-
 import axios from 'axios'
+import { leerSesion } from './sesion.js'
 
-// Creamos una instancia de Axios para comunicarnos
-// con nuestro microservicio de productos Spring Boot.
-const productosApi = axios.create({
+const baseURL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api/v1' : 'http://localhost:8080/api/v1')
+const api = axios.create({ baseURL, timeout: 10000 })
 
-  // Dirección base de nuestro backend.
-  baseURL: 'http://localhost:8081/api/v1',
-
-  // Tiempo máximo de espera de la solicitud: 10 segundos.
-  timeout: 10000,
-
-  // Indicamos que enviaremos y recibiremos datos JSON.
-  headers: {
-    'Content-Type': 'application/json'
+api.interceptors.request.use(config => {
+  const token = leerSesion()?.token
+  if (token && config.url !== '/auth/login' && config.url !== '/usuarios/registro') {
+    config.headers.set('Authorization', 'Bearer ' + token)
   }
+  return config
 })
 
-// Exportamos la instancia para utilizarla
-// desde otros archivos de nuestro frontend.
-export { productosApi }
+export const productosApi = api
+
+export async function iniciarSesion(datos) {
+  return (await api.post('/auth/login', datos)).data
+}
+
+export async function registrarUsuario(datos) {
+  return (await api.post('/usuarios/registro', datos)).data
+}
+
+export async function crearPedido(datos) {
+  return (await api.post('/pedidos', datos)).data
+}

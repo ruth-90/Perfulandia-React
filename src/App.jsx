@@ -14,6 +14,7 @@ import Login from './pages/Login.jsx'
 import Registro from './pages/Registro.jsx'
 import Blogs from './pages/Blogs.jsx'
 import Carrito from './pages/Carrito.jsx'
+import Pedidos from './pages/Pedidos.jsx'
 
 // VISTAS DE ADMINISTRACIÓN (MÓDULOS DE DARLING)
 import AdminDashboard from './pages/admin/AdminDashboard.jsx'
@@ -26,6 +27,7 @@ import AdminUsuarioForm from './pages/admin/AdminUsuarioForm.jsx'
 
 // CONEXIÓN CON EL BACKEND SPRING BOOT
 import { productosApi } from './services/api.js'
+import { eventoSesion, guardarSesion, leerSesion } from './services/sesion.js'
 import { obtenerProductosApi } from './services/productosApi.js'
 
 import './App.css'
@@ -37,32 +39,19 @@ export default function App() {
   // IDENTIFICAR SI ESTAMOS EN UNA RUTA ADMINISTRATIVA
   const esAdmin = location.pathname.startsWith('/admin')
 
-  // COMPROBAR SESIÓN DEL ADMINISTRADOR DE DEMOSTRACIÓN
-  const adminActivo = sessionStorage.getItem('adminActivo') === 'true'
+  const [usuarioActivo, setUsuarioActivo] = useState(leerSesion)
+  const adminActivo = usuarioActivo?.rol === 'ADMINISTRADOR'
 
+  useEffect(() => {
+    const actualizarSesion = () => setUsuarioActivo(leerSesion())
+    window.addEventListener(eventoSesion, actualizarSesion)
+    return () => window.removeEventListener(eventoSesion, actualizarSesion)
+  }, [])
 
-  // ESTADO DEL CLIENTE QUE INICIÓ SESIÓN
-  const [usuarioActivo, setUsuarioActivo] = useState(() => {
-
-    try {
-
-      const cliente = localStorage.getItem('clienteActivo')
-
-      return cliente ? JSON.parse(cliente) : null
-
-    } catch {
-
-      return null
-    }
-  })
-
-
-  // ACTUALIZAR EL CLIENTE CUANDO INICIA O CIERRA SESIÓN
   function actualizarUsuarioActivo(usuario) {
-
+    if (!usuario) guardarSesion(null)
     setUsuarioActivo(usuario)
   }
-
 
   // ESTADO DEL CARRITO CON PERSISTENCIA EN LOCALSTORAGE
   const [carrito, setCarrito] = useState(() => {
@@ -477,6 +466,11 @@ export default function App() {
             element={<Blogs />}
           />
 
+
+          <Route path="/pedidos" element={usuarioActivo
+            ? <Pedidos key={usuarioActivo.id ?? usuarioActivo.rol} rol={usuarioActivo.rol} />
+            : <Navigate to="/login" replace />
+          } />
 
           {/* CARRITO */}
           <Route

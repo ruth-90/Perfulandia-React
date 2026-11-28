@@ -23,6 +23,7 @@ import {
 import userEvent from "@testing-library/user-event";
 
 // COMPONENTE A PROBAR
+import { registrarUsuario } from "../services/api.js";
 import RegistroForm from "./RegistroForm.jsx";
 
 
@@ -42,6 +43,8 @@ vi.mock("react-router", () => ({
 // =============================================
 // FUNCIÓN PARA COMPLETAR EL FORMULARIO
 // =============================================
+
+vi.mock("../services/api.js", () => ({ registrarUsuario: vi.fn() }));
 
 async function completarRegistro(user, rut = "1000005K") {
 
@@ -102,13 +105,13 @@ async function completarRegistro(user, rut = "1000005K") {
     // Contraseña
     await user.type(
         screen.getByLabelText("Contraseña"),
-        "1234"
+        "12345678"
     );
 
     // Confirmar contraseña
     await user.type(
         screen.getByLabelText("Confirmar contraseña"),
-        "1234"
+        "12345678"
     );
 
 }
@@ -128,6 +131,7 @@ describe("RegistroForm - Perfulandia", () => {
 
         // Limpiar navegación simulada
         mockNavigate.mockReset();
+        registrarUsuario.mockReset();
 
     });
 
@@ -258,44 +262,6 @@ describe("RegistroForm - Perfulandia", () => {
     // PRUEBA 4: RUT DUPLICADO
     // =========================================
 
-    test("detecta un RUT que ya está registrado", async () => {
-
-        // PREPARAR
-        localStorage.setItem(
-            "usuarios",
-            JSON.stringify([
-                {
-                    rut: "1000005K",
-                    nombre: "Usuario Existente",
-                    correo: "existente@gmail.com"
-                }
-            ])
-        );
-
-        const user = userEvent.setup();
-
-        render(<RegistroForm />);
-
-        // ACTUAR
-        await user.type(
-            screen.getByLabelText("RUT"),
-            "1000005K"
-        );
-
-        await user.tab();
-
-        // COMPROBAR
-        expect(
-            screen.getByText("Este RUN ya está registrado.")
-        ).toBeInTheDocument();
-
-    });
-
-
-    // =========================================
-    // PRUEBA 5: CORREO INVÁLIDO
-    // =========================================
-
     test("rechaza correos con formato incorrecto", async () => {
 
         // PREPARAR
@@ -323,35 +289,6 @@ describe("RegistroForm - Perfulandia", () => {
 
     // =========================================
     // PRUEBA 6: DOMINIOS NO PERMITIDOS
-    // =========================================
-
-    test("rechaza dominios no autorizados", async () => {
-
-        // PREPARAR
-        const user = userEvent.setup();
-
-        render(<RegistroForm />);
-
-        // ACTUAR
-        await user.type(
-            screen.getByLabelText("Correo electrónico"),
-            "persona@outlook.com"
-        );
-
-        await user.tab();
-
-        // COMPROBAR
-        expect(
-            screen.getByText(
-                /Solo se permiten correos/i
-            )
-        ).toBeInTheDocument();
-
-    });
-
-
-    // =========================================
-    // PRUEBA 7: EDAD MÍNIMA
     // =========================================
 
     test("rechaza usuarios menores de 18 años", () => {
@@ -448,7 +385,7 @@ describe("RegistroForm - Perfulandia", () => {
     // PRUEBA 9: CONTRASEÑA CORTA
     // =========================================
 
-    test("rechaza contraseñas menores de 4 caracteres", async () => {
+    test("rechaza contraseñas menores de 8 caracteres", async () => {
 
         // PREPARAR
         const user = userEvent.setup();
@@ -466,7 +403,7 @@ describe("RegistroForm - Perfulandia", () => {
         // COMPROBAR
         expect(
             screen.getByText(
-                "La contraseña debe tener al menos 4 caracteres."
+                "La contraseña debe tener al menos 8 caracteres."
             )
         ).toBeInTheDocument();
 
@@ -487,7 +424,7 @@ describe("RegistroForm - Perfulandia", () => {
         // ACTUAR
         await user.type(
             screen.getByLabelText("Contraseña"),
-            "1234"
+            "12345678"
         );
 
         await user.type(
@@ -550,108 +487,26 @@ describe("RegistroForm - Perfulandia", () => {
     // PRUEBA 12: REGISTRO EXITOSO
     // =========================================
 
-    test("registra correctamente un usuario", async () => {
-
-        // PREPARAR
+    test("envía los datos del registro al backend y vuelve al login", async () => {
+        registrarUsuario.mockResolvedValue({ id: 1 });
         const user = userEvent.setup();
-
         render(<RegistroForm />);
-
-        // ACTUAR
         await completarRegistro(user);
-
-        await user.click(
-            screen.getByRole("button", {
-                name: "Crear cuenta"
-            })
-        );
-
-        // COMPROBAR USUARIO GUARDADO
-        const usuarios = JSON.parse(
-            localStorage.getItem("usuarios") || "[]"
-        );
-
-        expect(usuarios).toHaveLength(1);
-
-        expect(usuarios[0]).toMatchObject({
-            rut: "1000005K",
-            nombre: "Maria",
-            apellidos: "Perez",
-            correo: "maria@gmail.com",
-            tipoUsuario: "Cliente",
-            region: "Región Metropolitana",
-            comuna: "Santiago",
-            direccion: "Av. Principal 123"
-        });
-
-        // NO DEBE GUARDARSE LA CONTRASEÑA
-        expect(usuarios[0]).not.toHaveProperty("password");
-
-        // COMPROBAR NAVEGACIÓN AL LOGIN
-        expect(mockNavigate).toHaveBeenCalledWith(
-            "/login",
-            {
-                state: {
-                    registroExitoso: true
-                }
-            }
-        );
-
+        await user.click(screen.getByRole("button", { name: /registrar|crear cuenta/i }));
+        expect(registrarUsuario).toHaveBeenCalledWith(expect.objectContaining({
+            rut: "1000005-K", correo: "maria@gmail.com", password: "12345678"
+        }));
+        expect(mockNavigate).toHaveBeenCalledWith("/login", { state: { registroExitoso: true } });
+        expect(localStorage.getItem("usuarios")).toBeNull();
     });
 
-
-    // =========================================
-    // PRUEBA 13: CONSERVAR USUARIOS EXISTENTES
-    // =========================================
-
-    test("conserva los usuarios registrados anteriormente", async () => {
-
-        // PREPARAR
-        localStorage.setItem(
-            "usuarios",
-            JSON.stringify([
-                {
-                    rut: "12345678K",
-                    nombre: "Pedro",
-                    apellidos: "Lopez",
-                    correo: "pedro@gmail.com"
-                }
-            ])
-        );
-
+    test("muestra los conflictos informados por el servidor", async () => {
+        registrarUsuario.mockRejectedValue({ response: { status: 409, data: { mensaje: "El RUT ya está registrado." } } });
         const user = userEvent.setup();
-
         render(<RegistroForm />);
-
-        // ACTUAR
-        await completarRegistro(user, "1000005K");
-
-        await user.click(
-            screen.getByRole("button", {
-                name: "Crear cuenta"
-            })
-        );
-
-        // COMPROBAR
-        const usuarios = JSON.parse(
-            localStorage.getItem("usuarios") || "[]"
-        );
-
-        expect(usuarios).toHaveLength(2);
-
-        expect(usuarios[0].nombre).toBe("Pedro");
-
-        expect(usuarios[1].nombre).toBe("Maria");
-
-        expect(mockNavigate).toHaveBeenCalledWith(
-            "/login",
-            {
-                state: {
-                    registroExitoso: true
-                }
-            }
-        );
-
+        await completarRegistro(user);
+        await user.click(screen.getByRole("button", { name: /registrar|crear cuenta/i }));
+        expect(await screen.findByText("El RUT ya está registrado.")).toBeInTheDocument();
+        expect(mockNavigate).not.toHaveBeenCalled();
     });
-
 });

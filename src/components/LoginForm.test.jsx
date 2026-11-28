@@ -14,6 +14,8 @@ import {
 
 import userEvent from '@testing-library/user-event'
 
+import { iniciarSesion } from '../services/api.js'
+import { leerSesion } from '../services/sesion.js'
 import LoginForm from './LoginForm.jsx'
 
 // SIMULAR LA NAVEGACIÓN DE REACT ROUTER
@@ -25,6 +27,8 @@ vi.mock('react-router', () => ({
   useNavigate: () => mockNavigate
 }))
 
+vi.mock('../services/api.js', () => ({ iniciarSesion: vi.fn() }))
+
 // PRUEBAS DEL FORMULARIO DE INICIO DE SESIÓN
 describe('LoginForm - Perfulandia', () => {
 
@@ -33,6 +37,7 @@ describe('LoginForm - Perfulandia', () => {
     localStorage.clear()
     sessionStorage.clear()
     mockNavigate.mockReset()
+    iniciarSesion.mockReset()
   })
 
   // PRUEBA 1: MOSTRAR LOS CAMPOS
@@ -104,48 +109,6 @@ describe('LoginForm - Perfulandia', () => {
   })
 
   // PRUEBA 4: DOMINIO NO PERMITIDO
-  test('rechaza correos no autorizados', async () => {
-
-    const user = userEvent.setup()
-    render(<LoginForm />)
-
-    await user.type(
-      screen.getByLabelText('Correo electrónico'),
-      'usuario@outlook.com'
-    )
-
-    await user.tab()
-
-    expect(
-      screen.getByText(
-        /Solo se permiten correos/i
-      )
-    ).toBeInTheDocument()
-
-  })
-
-  // PRUEBA 5: CONTRASEÑA CORTA
-  test('rechaza contraseñas menores a 4 caracteres', async () => {
-
-    const user = userEvent.setup()
-    render(<LoginForm />)
-
-    await user.type(
-      screen.getByLabelText('Contraseña'),
-      '123'
-    )
-
-    await user.tab()
-
-    expect(
-      screen.getByText(
-        'La contraseña debe tener al menos 4 caracteres.'
-      )
-    ).toBeInTheDocument()
-
-  })
-
-  // PRUEBA 6: MOSTRAR Y OCULTAR CONTRASEÑA
   test('permite mostrar y ocultar la contraseña', async () => {
 
     const user = userEvent.setup()
@@ -183,139 +146,33 @@ describe('LoginForm - Perfulandia', () => {
   })
 
   // PRUEBA 7: INGRESO DEL ADMINISTRADOR
-  test('permite ingresar como administrador', async () => {
-
+  async function enviarLogin(correo, password) {
     const user = userEvent.setup()
+    await user.type(screen.getByLabelText(/correo electrónico/i), correo)
+    await user.type(screen.getByLabelText(/^contraseña$/i), password)
+    await user.click(screen.getByRole('button', { name: /iniciar sesión/i }))
+  }
+
+  test.each([['ADMINISTRADOR', '/admin'], ['CLIENTE', '/productos'], ['VENDEDOR', '/pedidos']])(
+    'guarda el JWT y dirige al usuario con rol %s', async (rol, destino) => {
+      const usuario = { id: 3, nombre: 'Usuario', correo: 'prueba@perfulandia.cl', rol, token: 'jwt-de-prueba' }
+      iniciarSesion.mockResolvedValue(usuario)
+      const onLogin = vi.fn()
+      render(<LoginForm onLogin={onLogin} />)
+      await enviarLogin(usuario.correo, 'contraseña-de-prueba')
+      expect(iniciarSesion).toHaveBeenCalledWith({ correo: usuario.correo, password: 'contraseña-de-prueba' })
+      expect(leerSesion()).toEqual(usuario)
+      expect(onLogin).toHaveBeenCalledWith(usuario)
+      expect(mockNavigate).toHaveBeenCalledWith(destino)
+    }
+  )
+
+  test('muestra el rechazo de las credenciales y no guarda una sesión', async () => {
+    iniciarSesion.mockRejectedValue({ response: { status: 401 } })
     render(<LoginForm />)
-
-    // INGRESAR CREDENCIALES DEL ADMINISTRADOR DEMO
-    await user.type(
-      screen.getByLabelText('Correo electrónico'),
-      'admin@duoc.cl'
-    )
-
-    await user.type(
-      screen.getByLabelText('Contraseña'),
-      '1234'
-    )
-
-    await user.click(
-      screen.getByRole('button', {
-        name: 'Iniciar sesión'
-      })
-    )
-
-    // COMPROBAR MENSAJE
-    expect(
-      screen.getByText(
-        'Ingreso administrador correcto.'
-      )
-    ).toBeInTheDocument()
-
-    // COMPROBAR NAVEGACIÓN
-    expect(mockNavigate).toHaveBeenCalledWith(
-      '/admin'
-    )
-
-    // COMPROBAR SESIÓN DEMO
-    expect(
-      sessionStorage.getItem('adminActivo')
-    ).toBe('true')
-
-  })
-
-  // PRUEBA 8: USUARIO NO REGISTRADO
-  test('muestra error cuando el usuario no existe', async () => {
-
-    const user = userEvent.setup()
-    render(<LoginForm />)
-
-    // INGRESAR UN CORREO QUE NO EXISTE
-    await user.type(
-      screen.getByLabelText('Correo electrónico'),
-      'desconocido@gmail.com'
-    )
-
-    await user.type(
-      screen.getByLabelText('Contraseña'),
-      '1234'
-    )
-
-    await user.click(
-      screen.getByRole('button', {
-        name: 'Iniciar sesión'
-      })
-    )
-
-    // COMPROBAR EL MENSAJE REAL DEL LOGIN
-    expect(
-      screen.getByText(
-        'Correo o contraseña incorrectos.'
-      )
-    ).toBeInTheDocument()
-
-    // NO DEBE NAVEGAR
+    await enviarLogin('prueba@perfulandia.cl', 'contraseña-de-prueba')
+    expect(await screen.findByText('Correo o contraseña incorrectos.')).toBeInTheDocument()
+    expect(leerSesion()).toBeNull()
     expect(mockNavigate).not.toHaveBeenCalled()
-
-    // NO DEBE CREAR UNA SESIÓN
-    expect(
-      localStorage.getItem('clienteActivo')
-    ).toBeNull()
-
-    expect(
-      sessionStorage.getItem('adminActivo')
-    ).toBeNull()
-
   })
-
-  // PRUEBA 9: INGRESO DE CLIENTE DEMO
-  test('permite ingresar a un cliente registrado', async () => {
-
-    const user = userEvent.setup()
-    render(<LoginForm />)
-
-    // UTILIZAR UN CLIENTE QUE EXISTE EN usuariosDemo.js
-    await user.type(
-      screen.getByLabelText('Correo electrónico'),
-      'cliente1@gmail.com'
-    )
-
-    await user.type(
-      screen.getByLabelText('Contraseña'),
-      '1234'
-    )
-
-    await user.click(
-      screen.getByRole('button', {
-        name: 'Iniciar sesión'
-      })
-    )
-
-    // COMPROBAR MENSAJE
-    expect(
-      screen.getByText(
-        'Ingreso cliente correcto.'
-      )
-    ).toBeInTheDocument()
-
-    // COMPROBAR NAVEGACIÓN
-    expect(mockNavigate).toHaveBeenCalledWith(
-      '/productos'
-    )
-
-    // COMPROBAR CLIENTE ACTIVO
-    expect(
-      JSON.parse(localStorage.getItem('clienteActivo'))
-    ).toEqual({
-      nombre: 'Cliente Uno',
-      correo: 'cliente1@gmail.com'
-    })
-
-    // EL CLIENTE NO DEBE TENER SESIÓN ADMINISTRATIVA
-    expect(
-      sessionStorage.getItem('adminActivo')
-    ).toBeNull()
-
-  })
-
 })

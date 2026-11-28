@@ -1,8 +1,10 @@
 
+import { useLocation } from 'react-router'
 import LoginForm from '../components/LoginForm.jsx'
 import '../styles/login.css'
 
 export default function Login({ onLogin }) {
+  const { state } = useLocation()
   return (
     <section className="container py-5">
 
@@ -28,7 +30,8 @@ export default function Login({ onLogin }) {
             </div>
 
             {/* Formulario de inicio de sesión */}
-            <LoginForm onLogin={onLogin} />
+            {state?.registroExitoso && <div className="alert alert-success">Cuenta creada. Ya puedes iniciar sesión.</div>}
+            <LoginForm onLogin={onLogin} volverAlCarrito={state?.volverAlCarrito} />
 
             {/* Enlace de registro */}
             <div className="text-center mt-4">

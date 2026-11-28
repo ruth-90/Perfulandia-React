@@ -420,10 +420,7 @@ describe(
       async () => {
 
         // Simular sesión de administrador.
-        sessionStorage.setItem(
-          'adminActivo',
-          'true'
-        )
+        sessionStorage.setItem('perfulandiaSesion', JSON.stringify({ rol: 'ADMINISTRADOR', token: 'jwt-de-prueba' }))
 
         mostrar('/admin')
 

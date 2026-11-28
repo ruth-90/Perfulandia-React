@@ -38,13 +38,11 @@ describe('Navbar', () => {
     expect(screen.getByText('maria@gmail.com')).toBeInTheDocument()
   })
 
-  test('cierra sesión, elimina clienteActivo y llama al callback', async () => {
+  test('solicita el cierre de sesión', async () => {
     const user = userEvent.setup()
     const onCerrarSesion = vi.fn()
-    localStorage.setItem('clienteActivo', '{"nombre":"Maria"}')
     mostrar({ usuarioActivo: { nombre: 'Maria', correo: 'maria@gmail.com' }, onCerrarSesion })
     await user.click(screen.getByRole('button', { name: /cerrar sesión/i }))
-    expect(localStorage.getItem('clienteActivo')).toBeNull()
     expect(onCerrarSesion).toHaveBeenCalledTimes(1)
     expect(screen.getByText('Inicio destino')).toBeInTheDocument()
   })
